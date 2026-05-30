@@ -1,0 +1,32 @@
+## Copy this file and create .env file
+
+# PostgreSQL Development Database Configuration
+JDBC_URI=jdbc:postgresql://localhost:5432/careconnect
+DB_USER=postgres
+DB_PASSWORD=changeme
+CORS_ALLOWED_LIST=http://localhost:*
+# Security Configuration
+SECURITY_JWT_SECRET=replace-with-a-long-random-secret-at-least-32-chars
+# Firebase Configuration (mocked for development)
+FIREBASE_PROJECT_ID=your-firebase-project-id
+FIREBASE_SENDER_ID=your-firebase-sender-id
+# AWS Configuration (mocked for development - not used in dev mode)
+AWS_ACCESS_KEY_ID=mock_access_key
+AWS_SECRET_ACCESS_KEY=mock_secret_key
+AWS_REGION=us-east-1
+STRIPE_SECRET_KEY=sk_test_your_stripe_test_key_here
+STRIPE_WEEBHOOK_SECRET=whsec_your_stripe_webhook_secret_here
+# Email provider
+CARECONNECT_EMAIL_PROVIDER=sendgrid
+CARECONNECT_EMAIL_SENDGRID_API_KEY=SG.your_sendgrid_api_key_here
+# From address
+CARECONNECT_EMAIL_FROM=donotreply@careconnect.me
+# Demo notification recipients for appointment notification testing
+DEMO_NOTIFICATIONS_EMAIL=
+DEMO_NOTIFICATIONS_PHONE=
+DEEPSEEK_API_KEY=sk-your-deepseek-api-key-here
+OPENAI_API_KEY=sk-your-openai-api-key-here
+S3_BUCKET_NAME=your-s3-bucket-name
+DEEPSEEK_OPENROUTER_API_KEY=sk-or-v1-your-openrouter-key-here
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret

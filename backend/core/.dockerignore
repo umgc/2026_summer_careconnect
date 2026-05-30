@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# Build output — allow only the fat jar
+target/*
+!target/careconnect-backend-0.0.1-SNAPSHOT.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# Environment / secrets (injected via Fargate task definition)
+.env
+.env.*
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Documentation & scripts
+*.md
+*.sh
+*.bat
+docs/
+pg_docker/
+
+# OS
+.DS_Store
+Thumbs.db

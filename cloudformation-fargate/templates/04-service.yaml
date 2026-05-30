@@ -1,0 +1,221 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CareConnect ECS Fargate service and ALB stack.
+
+Parameters:
+  # Environment name must match the networking, data, and platform stacks.
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - cfdemo
+      - staging
+      - prod
+
+  # Full repository URI with tag, for example:
+  # 123456789012.dkr.ecr.us-east-1.amazonaws.com/careconnect-backend-cfdemo:cfdemo
+  BackendImageUri:
+    Type: String
+    Description: Full ECR image URI including tag
+
+  # Current application convention is to run the cloud deployment with the dev profile.
+  SpringProfile:
+    Type: String
+    Default: dev
+
+  # Used by backend auth / redirect flows and some generated links.
+  FrontendBaseUrl:
+    Type: String
+    Default: http://localhost:3000
+
+  # Passed through to careconnect.cors_allowed.
+  CorsAllowedList:
+    Type: String
+    Default: http://localhost:*,http://127.0.0.1:*
+
+  # The backend currently binds to 8081 in ECS.
+  ContainerPort:
+    Type: Number
+    Default: 8081
+
+  # Start small for demo. Scale later by updating the stack.
+  DesiredCount:
+    Type: Number
+    Default: 1
+
+  # ECS/Fargate task sizing.
+  TaskCpu:
+    Type: String
+    Default: '1024'
+    AllowedValues:
+      - '256'
+      - '512'
+      - '1024'
+      - '2048'
+      - '4096'
+
+  # Fargate memory must be valid for the chosen CPU value.
+  TaskMemory:
+    Type: String
+    Default: '3072'
+
+  # Public health endpoint used by the ALB target group.
+  HealthCheckPath:
+    Type: String
+    Default: /v1/api/test/health
+
+  # Gives Spring enough time to start before ALB health checks count as failures.
+  HealthCheckGracePeriodSeconds:
+    Type: Number
+    Default: 180
+
+Resources:
+  # Public Application Load Balancer.
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub careconnect-${Environment}-alb
+      Scheme: internet-facing
+      Type: application
+      SecurityGroups:
+        - Fn::ImportValue: !Sub careconnect-${Environment}-AlbSecurityGroupId
+      Subnets:
+        - Fn::ImportValue: !Sub careconnect-${Environment}-PublicSubnetAId
+        - Fn::ImportValue: !Sub careconnect-${Environment}-PublicSubnetBId
+
+  # ALB target group for ECS tasks.
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub careconnect-${Environment}-tg
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue: !Sub careconnect-${Environment}-VpcId
+      HealthCheckEnabled: true
+      HealthCheckPath: !Ref HealthCheckPath
+      HealthCheckProtocol: HTTP
+      Matcher:
+        HttpCode: 200
+
+  # Port 80 HTTP listener forwarding to the target group.
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # ECS task definition tied to the runtime contract used by the backend code.
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub careconnect-${Environment}-backend
+      Cpu: !Ref TaskCpu
+      Memory: !Ref TaskMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn:
+        Fn::ImportValue: !Sub careconnect-${Environment}-EcsTaskExecutionRoleArn
+      TaskRoleArn:
+        Fn::ImportValue: !Sub careconnect-${Environment}-EcsTaskRoleArn
+      RuntimePlatform:
+        OperatingSystemFamily: LINUX
+        CpuArchitecture: X86_64
+      ContainerDefinitions:
+        - Name: cc-backend
+          Image: !Ref BackendImageUri
+          Essential: true
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+              HostPort: !Ref ContainerPort
+              Protocol: tcp
+              AppProtocol: http
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group:
+                Fn::ImportValue: !Sub careconnect-${Environment}-BackendLogGroupName
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+          Environment:
+            # Non-secret runtime configuration.
+            - Name: SPRING_PROFILES_ACTIVE
+              Value: !Ref SpringProfile
+            - Name: SERVER_PORT
+              Value: !Sub '${ContainerPort}'
+            - Name: JDBC_URI
+              Value:
+                Fn::ImportValue: !Sub careconnect-${Environment}-DatabaseJdbcUri
+            - Name: DB_USER
+              Value:
+                Fn::ImportValue: !Sub careconnect-${Environment}-DatabaseUsername
+            - Name: APP_FRONTEND_BASE_URL
+              Value: !Ref FrontendBaseUrl
+            - Name: CORS_ALLOWED_LIST
+              Value: !Ref CorsAllowedList
+            - Name: SPRING_FLYWAY_ENABLED
+              Value: 'false'
+            - Name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              Value: update
+          Secrets:
+            # Secret injection from the data stack.
+            - Name: DB_PASSWORD
+              ValueFrom:
+                Fn::ImportValue: !Sub careconnect-${Environment}-DatabasePasswordSecretArn
+            - Name: SECURITY_JWT_SECRET
+              ValueFrom:
+                Fn::ImportValue: !Sub careconnect-${Environment}-JwtSecretArn
+
+  # Long-running Fargate service fronted by the ALB.
+  EcsService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - Listener
+    Properties:
+      ServiceName: !Sub careconnect-${Environment}-backend
+      Cluster:
+        Fn::ImportValue: !Sub careconnect-${Environment}-EcsClusterArn
+      LaunchType: FARGATE
+      DesiredCount: !Ref DesiredCount
+      TaskDefinition: !Ref TaskDefinition
+      HealthCheckGracePeriodSeconds: !Ref HealthCheckGracePeriodSeconds
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - Fn::ImportValue: !Sub careconnect-${Environment}-EcsTaskSecurityGroupId
+          Subnets:
+            - Fn::ImportValue: !Sub careconnect-${Environment}-PublicSubnetAId
+            - Fn::ImportValue: !Sub careconnect-${Environment}-PublicSubnetBId
+      LoadBalancers:
+        - ContainerName: cc-backend
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref TargetGroup
+
+Outputs:
+  # Public endpoint used by testers and the Flutter app.
+  LoadBalancerDnsName:
+    Value: !GetAtt LoadBalancer.DNSName
+    Export:
+      Name: !Sub careconnect-${Environment}-LoadBalancerDnsName
+
+  LoadBalancerUrl:
+    Value: !Sub http://${LoadBalancer.DNSName}
+    Export:
+      Name: !Sub careconnect-${Environment}-LoadBalancerUrl
+
+  TargetGroupArn:
+    Value: !Ref TargetGroup
+    Export:
+      Name: !Sub careconnect-${Environment}-TargetGroupArn
+
+  ServiceName:
+    Value: !Ref EcsService
+    Export:
+      Name: !Sub careconnect-${Environment}-ServiceName

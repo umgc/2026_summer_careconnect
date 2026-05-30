@@ -1,0 +1,145 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CareConnect data stack for RDS PostgreSQL and application secrets.
+
+Parameters:
+  # Environment keeps this data plane isolated from other deployments.
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - cfdemo
+      - staging
+      - prod
+
+  # Logical database name used in the JDBC URI.
+  DatabaseName:
+    Type: String
+    Default: careconnect
+
+  # PostgreSQL master username.
+  DatabaseMasterUsername:
+    Type: String
+    Default: postgres
+
+  # Stored both as the DB instance password and in Secrets Manager so
+  # the ECS service can inject it at runtime.
+  DatabaseMasterPassword:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+
+  # JWT signing secret consumed by the backend at startup.
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    MinLength: 32
+
+  # Small default for a student/demo environment.
+  DatabaseInstanceClass:
+    Type: String
+    Default: db.t4g.micro
+
+  # Minimal baseline storage. MaxAllocatedStorage allows growth later.
+  DatabaseAllocatedStorage:
+    Type: Number
+    Default: 20
+
+Resources:
+  # RDS requires a DB subnet group covering at least two AZs.
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: !Sub CareConnect ${Environment} PostgreSQL subnet group
+      SubnetIds:
+        - Fn::ImportValue: !Sub careconnect-${Environment}-PrivateDbSubnetAId
+        - Fn::ImportValue: !Sub careconnect-${Environment}-PrivateDbSubnetBId
+      Tags:
+        - Key: Name
+          Value: !Sub careconnect-${Environment}-db-subnet-group
+
+  # Secret consumed by ECS as DB_PASSWORD.
+  DatabasePasswordSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub /careconnect/${Environment}/db-password
+      SecretString: !Ref DatabaseMasterPassword
+
+  # Secret consumed by ECS as SECURITY_JWT_SECRET.
+  JwtSecretValue:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub /careconnect/${Environment}/jwt-secret
+      SecretString: !Ref JwtSecret
+
+  # Standard single-instance PostgreSQL RDS deployment.
+  DatabaseInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub careconnect-${Environment}-db
+      Engine: postgres
+      EngineVersion: '17.6'
+      DBName: !Ref DatabaseName
+      DBInstanceClass: !Ref DatabaseInstanceClass
+      AllocatedStorage: !Ref DatabaseAllocatedStorage
+      MaxAllocatedStorage: 100
+      StorageType: gp3
+      StorageEncrypted: true
+      MasterUsername: !Ref DatabaseMasterUsername
+      MasterUserPassword: !Ref DatabaseMasterPassword
+      PubliclyAccessible: false
+      Port: 5432
+      BackupRetentionPeriod: 1
+      AutoMinorVersionUpgrade: true
+      MultiAZ: false
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      VPCSecurityGroups:
+        - Fn::ImportValue: !Sub careconnect-${Environment}-RdsSecurityGroupId
+      CopyTagsToSnapshot: true
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value: !Sub careconnect-${Environment}-db
+
+Outputs:
+  # Export raw endpoint pieces and a ready-to-use JDBC URI for the ECS stack.
+  DatabaseEndpointAddress:
+    Value: !GetAtt DatabaseInstance.Endpoint.Address
+    Export:
+      Name: !Sub careconnect-${Environment}-DatabaseEndpointAddress
+
+  DatabaseEndpointPort:
+    Value: !GetAtt DatabaseInstance.Endpoint.Port
+    Export:
+      Name: !Sub careconnect-${Environment}-DatabaseEndpointPort
+
+  DatabaseName:
+    Value: !Ref DatabaseName
+    Export:
+      Name: !Sub careconnect-${Environment}-DatabaseName
+
+  DatabaseUsername:
+    Value: !Ref DatabaseMasterUsername
+    Export:
+      Name: !Sub careconnect-${Environment}-DatabaseUsername
+
+  DatabaseJdbcUri:
+    Value: !Sub
+      - jdbc:postgresql://${DbEndpoint}:${DbPort}/${DbName}
+      - DbEndpoint: !GetAtt DatabaseInstance.Endpoint.Address
+        DbPort: !GetAtt DatabaseInstance.Endpoint.Port
+        DbName: !Ref DatabaseName
+    Export:
+      Name: !Sub careconnect-${Environment}-DatabaseJdbcUri
+
+  DatabasePasswordSecretArn:
+    Value: !Ref DatabasePasswordSecret
+    Export:
+      Name: !Sub careconnect-${Environment}-DatabasePasswordSecretArn
+
+  JwtSecretArn:
+    Value: !Ref JwtSecretValue
+    Export:
+      Name: !Sub careconnect-${Environment}-JwtSecretArn

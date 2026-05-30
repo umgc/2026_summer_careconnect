@@ -1,0 +1,1 @@
+ALTER TABLE subscriptions RENAME COLUMN stripe_subscription_id TO payment_subscription_id;

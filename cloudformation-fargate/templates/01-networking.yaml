@@ -1,0 +1,265 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CareConnect clean networking stack for public ALB, public ECS tasks, and private RDS.
+
+Parameters:
+  # Environment is used as the naming prefix for every exported value.
+  # Keeping this explicit allows multiple parallel environments such as
+  # dev, cfdemo, staging, and prod to coexist in the same account.
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - cfdemo
+      - staging
+      - prod
+
+  # The VPC CIDR should not overlap with other networks you plan to peer with.
+  VpcCidr:
+    Type: String
+    Default: 10.30.0.0/16
+
+  # Public subnets host the ALB and ECS tasks in this simplified student setup.
+  # ECS tasks receive public IPs so the design avoids NAT gateway cost/complexity.
+  PublicSubnetACidr:
+    Type: String
+    Default: 10.30.0.0/24
+
+  PublicSubnetBCidr:
+    Type: String
+    Default: 10.30.1.0/24
+
+  # Private DB subnets are isolated from direct internet access.
+  PrivateDbSubnetACidr:
+    Type: String
+    Default: 10.30.10.0/24
+
+  PrivateDbSubnetBCidr:
+    Type: String
+    Default: 10.30.11.0/24
+
+Resources:
+  # Core network boundary for the entire application environment.
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidr
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Sub careconnect-${Environment}-vpc
+
+  # Required so public subnets can reach the internet.
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub careconnect-${Environment}-igw
+
+  # Attaches the internet gateway to this VPC.
+  VpcIgwAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  # Public subnet A for ALB and ECS tasks.
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref PublicSubnetACidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub careconnect-${Environment}-public-a
+
+  # Public subnet B for ALB and ECS tasks in a second AZ.
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref PublicSubnetBCidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub careconnect-${Environment}-public-b
+
+  # Private DB subnet A.
+  PrivateDbSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref PrivateDbSubnetACidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub careconnect-${Environment}-db-a
+
+  # Private DB subnet B.
+  PrivateDbSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: !Ref PrivateDbSubnetBCidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub careconnect-${Environment}-db-b
+
+  # Public routing for internet-facing components.
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub careconnect-${Environment}-public-rt
+
+  # Default route to the internet gateway for the public subnets.
+  PublicDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VpcIgwAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  # Associates public subnet A with the public route table.
+  PublicSubnetARouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetA
+
+  # Associates public subnet B with the public route table.
+  PublicSubnetBRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnetB
+
+  # Private route table for DB subnets. No internet route is defined here.
+  PrivateDbRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags:
+        - Key: Name
+          Value: !Sub careconnect-${Environment}-db-rt
+
+  # Associates private DB subnet A with the DB route table.
+  PrivateDbSubnetARouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateDbRouteTable
+      SubnetId: !Ref PrivateDbSubnetA
+
+  # Associates private DB subnet B with the DB route table.
+  PrivateDbSubnetBRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateDbRouteTable
+      SubnetId: !Ref PrivateDbSubnetB
+
+  # ALB SG: public HTTP ingress, open egress.
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public HTTP access to the CareConnect ALB
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub careconnect-${Environment}-alb-sg
+
+  # ECS task SG: only the ALB can reach application traffic on 8081.
+  EcsTaskSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Application traffic from ALB to ECS tasks
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8081
+          ToPort: 8081
+          SourceSecurityGroupId: !Ref AlbSecurityGroup
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub careconnect-${Environment}-ecs-task-sg
+
+  # RDS SG: only ECS tasks can connect to PostgreSQL.
+  RdsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: PostgreSQL access from ECS tasks
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref EcsTaskSecurityGroup
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub careconnect-${Environment}-rds-sg
+
+Outputs:
+  # Exports are used by later stacks through Fn::ImportValue.
+  VpcId:
+    Value: !Ref Vpc
+    Export:
+      Name: !Sub careconnect-${Environment}-VpcId
+
+  PublicSubnetAId:
+    Value: !Ref PublicSubnetA
+    Export:
+      Name: !Sub careconnect-${Environment}-PublicSubnetAId
+
+  PublicSubnetBId:
+    Value: !Ref PublicSubnetB
+    Export:
+      Name: !Sub careconnect-${Environment}-PublicSubnetBId
+
+  PrivateDbSubnetAId:
+    Value: !Ref PrivateDbSubnetA
+    Export:
+      Name: !Sub careconnect-${Environment}-PrivateDbSubnetAId
+
+  PrivateDbSubnetBId:
+    Value: !Ref PrivateDbSubnetB
+    Export:
+      Name: !Sub careconnect-${Environment}-PrivateDbSubnetBId
+
+  AlbSecurityGroupId:
+    Value: !Ref AlbSecurityGroup
+    Export:
+      Name: !Sub careconnect-${Environment}-AlbSecurityGroupId
+
+  EcsTaskSecurityGroupId:
+    Value: !Ref EcsTaskSecurityGroup
+    Export:
+      Name: !Sub careconnect-${Environment}-EcsTaskSecurityGroupId
+
+  RdsSecurityGroupId:
+    Value: !Ref RdsSecurityGroup
+    Export:
+      Name: !Sub careconnect-${Environment}-RdsSecurityGroupId

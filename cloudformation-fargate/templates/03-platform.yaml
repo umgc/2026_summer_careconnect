@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CareConnect platform stack for ECR, ECS cluster, roles, and logs.
+
+Parameters:
+  # Environment name drives resource naming and exports.
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - cfdemo
+      - staging
+      - prod
+
+  # Repo name can be made unique per environment when running parallel stacks.
+  RepositoryName:
+    Type: String
+    Default: careconnect-backend
+
+  # Log retention for the backend container log group.
+  LogRetentionDays:
+    Type: Number
+    Default: 14
+    AllowedValues:
+      - 1
+      - 3
+      - 5
+      - 7
+      - 14
+      - 30
+      - 60
+      - 90
+      - 120
+      - 150
+      - 180
+      - 365
+
+Resources:
+  # Backend image repository.
+  BackendRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref RepositoryName
+      ImageTagMutability: MUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: false
+
+  # Log group used by the ECS task definition.
+  BackendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /ecs/careconnect-backend-${Environment}
+      RetentionInDays: !Ref LogRetentionDays
+
+  # ECS cluster that will host the Fargate service.
+  EcsCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub careconnect-${Environment}-cluster
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+
+  # Execution role: image pull, logs, secrets read.
+  EcsTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub careconnect-${Environment}-ecsTaskExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: !Sub careconnect-${Environment}-ecs-secrets
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource:
+                  - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/careconnect/${Environment}/*
+
+  # Task role: application IAM surface. Empty now, ready for future permissions.
+  EcsTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub careconnect-${Environment}-ecsTaskRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+
+Outputs:
+  # Exported outputs are consumed by the service stack.
+  EcrRepositoryUri:
+    Value: !GetAtt BackendRepository.RepositoryUri
+    Export:
+      Name: !Sub careconnect-${Environment}-EcrRepositoryUri
+
+  EcrRepositoryName:
+    Value: !Ref BackendRepository
+    Export:
+      Name: !Sub careconnect-${Environment}-EcrRepositoryName
+
+  EcsClusterName:
+    Value: !Ref EcsCluster
+    Export:
+      Name: !Sub careconnect-${Environment}-EcsClusterName
+
+  EcsClusterArn:
+    Value: !GetAtt EcsCluster.Arn
+    Export:
+      Name: !Sub careconnect-${Environment}-EcsClusterArn
+
+  EcsTaskExecutionRoleArn:
+    Value: !GetAtt EcsTaskExecutionRole.Arn
+    Export:
+      Name: !Sub careconnect-${Environment}-EcsTaskExecutionRoleArn
+
+  EcsTaskRoleArn:
+    Value: !GetAtt EcsTaskRole.Arn
+    Export:
+      Name: !Sub careconnect-${Environment}-EcsTaskRoleArn
+
+  BackendLogGroupName:
+    Value: !Ref BackendLogGroup
+    Export:
+      Name: !Sub careconnect-${Environment}-BackendLogGroupName

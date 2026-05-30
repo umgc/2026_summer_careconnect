@@ -1,0 +1,142 @@
+{
+  "@@locale": "ur",
+    "systemDefault":"نظام کی ڈیفالٹ",
+  "menuTitle": "مینو",
+  "yourShortcuts": "آپ کے شارٹ کٹس",
+  "preferences": "ترجیحات",
+  "darkMode": "ڈارک موڈ",
+  "language": "زبان",
+  "logout": "لاگ آؤٹ",
+  "tools": "اوزار",
+  "customize": "اپنی مرضی کے مطابق بنائیں",
+  "search": "تلاش",
+  "invoiceAssistant": "انوائس اسسٹنٹ",
+  "evv": "EVV",
+  "calendarAssistant": "کیلنڈر اسسٹنٹ",
+  "medicationManagement": "ادویات کا انتظام",
+  "socialFeed": "سوشل فیڈ",
+  "gamification": "گیمیفیکیشن",
+  "wearables": "ویئرایبلز",
+  "fileManagement": "فائل مینجمنٹ",
+  "addPatient": "مریض شامل کریں",
+  "settings": "سیٹنگز",
+  "fallDetection": "گرنے کی شناخت",
+  "informedDelivery": "باخبر ترسیل",
+  "smartDevices": "ذہین آلات",
+  "pleaseLogIn": "براہ کرم لاگ ان کریں",
+  "loginRequiredMessage": "مینو تک رسائی کے لیے لاگ ان ضروری ہے",
+  "login": "لاگ ان",
+  "customizeShortcuts": "شارٹ کٹس کو اپنی مرضی کے مطابق بنائیں",
+  "cancel": "منسوخ کریں",
+  "save": "محفوظ کریں",
+  "systemDefault": "سسٹم ڈیفالٹ",
+  "fallbackUser": "صارف",
+
+  "dashboard": "ڈیش بورڈ",
+
+  "shortcut_dashboard": "ڈیش بورڈ",
+  "shortcut_invoices": "انوائسز",
+  "shortcut_calendar": "کیلنڈر",
+  "shortcut_feed": "فیڈ",
+  "shortcut_meds": "ادویات",
+  "shortcut_evv": "EVV",
+  "shortcut_wearables": "ویئرایبلز",
+  "shortcut_files": "فائلز",
+  "shortcut_gamification": "گیمیفیکیشن",
+
+  "navHome": "ہوم",
+  "navSymptoms": "علامات",
+  "navHealth": "صحت",
+  "navMessages": "پیغامات",
+  "navMenu": "مینو",
+  "navPatientList": "مریضوں کی فہرست",
+  "navAnalytics": "تجزیہ",
+  "navMore": "مزید",
+
+  "notetakerAssistant": "نوٹ ٹیکر اسسٹنٹ",
+
+"settingsTitle": "سیٹنگز",
+"settingsAppearance": "ظاہری شکل",
+"settingsNotifications": "اطلاعات",
+"settingsLoadingNotificationSettings": "اطلاعات کی ترتیبات لوڈ ہو رہی ہیں...",
+"settingsUnableToLoadNotificationSettings": "اطلاعات کی ترتیبات لوڈ نہیں ہو سکیں",
+"settingsRefresh": "تازہ کریں",
+
+"settingsDarkMode": "ڈارک موڈ",
+"settingsToggleThemeDesc": "لائٹ اور ڈارک تھیم کے درمیان سوئچ کریں",
+
+"settingsNotifEmergency": "ہنگامی الرٹس",
+"settingsNotifEmergencyDesc": "اہم صحت کی اطلاع اور ہنگامی صورتیں",
+"settingsNotifVideoCall": "ویڈیو کال اطلاعات",
+"settingsNotifVideoCallDesc": "درآمد ہونے والی ویڈیو کالز کی اطلاع",
+"settingsNotifAudioCall": "آڈیو کال اطلاعات",
+"settingsNotifAudioCallDesc": "درآمد ہونے والی آڈیو کالز کی اطلاع",
+"settingsNotifSignificantVitals": "اہم حیاتیاتی اشاریے",
+"settingsNotifSignificantVitalsDesc": "حیاتیاتی اشاروں میں اہم تبدیلیاں",
+"settingsNotifSMS": "ایس ایم ایس اطلاعات",
+"settingsNotifSMSDesc": "آپ کے فون پر ٹیکسٹ میسج الرٹس",
+"settingsNotifGamification": "گییمیفیکیشن",
+"settingsNotifGamificationDesc": "کامیابیوں اور پیش رفت کی اطلاعات",
+
+"settingsSnackUpdated": "اطلاعات کی ترتیبات اپ ڈیٹ کی گئیں",
+"settingsSnackUpdateFailed": "ترتیبات اپ ڈیٹ کرنے میں ناکامی",
+"settingsCacheCleared": "کیش کامیابی سے صاف کیا گیا",
+
+"settingsAIAssistant": "اے آئی اسسٹنٹ",
+"settingsAIConfiguration": "اے آئی ترتیب",
+"settingsAIConfigurationDesc": "اپنے اے آئی اسسٹنٹ کی ترتیبات حسبِ منشا کریں",
+
+"settingsSubscription": "سبسکرپشن",
+"settingsManageSubscription": "سبسکرپشن کا انتظام کریں",
+"settingsManageSubscriptionDesc": "اپنی سبسکرپشن پلان دیکھیں یا اپ ڈیٹ کریں",
+
+"settingsNotetakerAssistant": "نوٹ ٹیکر اسسٹنٹ",
+"settingsNotetakerConfiguration": "نوٹ ٹیکر ترتیب",
+"settingsNotetakerConfigurationDesc": "نوٹ ٹیکر اسسٹنٹ کی ترتیبات حسبِ منشا کریں",
+
+"settingsGeneral": "جنرل",
+"settingsClearCache": "کیش صاف کریں",
+"settingsClearCacheShortDesc": "عارضی فائلیں اور کیش ڈیٹا حذف کریں",
+"settingsClearCacheDesc": "یہ تمام عارضی فائلیں اور کیش ڈیٹا حذف کرے گا۔ کیش صاف کرنے کے بعد ایپ کو مواد لوڈ کرنے میں زیادہ وقت لگ سکتا ہے۔",
+
+"settingsSignOut": "سائن آؤٹ",
+"settingsSignOutDesc": "اپنے اکاؤنٹ سے سائن آؤٹ کریں",
+"settingsSignOutConfirmMessage": "کیا آپ واقعی سائن آؤٹ کرنا چاہتے ہیں؟",
+
+"settingsDeleteAccount": "کھاتہ ختم کریں",
+"settingsDeleteAccountShortDesc": "اپنا اکاؤنٹ مستقل طور پر حذف کریں",
+"settingsDeleteAccountDesc": "یہ کارروائی واپس نہیں کی جا سکتی۔ آپ کے تمام ڈیٹا مستقل طور پر حذف ہو جائیں گے۔",
+"settingsDeleteAccountRequested": "کھاتہ حذف کرنے کی درخواست کی گئی ہے۔ براہِ کرم سپورٹ سے رابطہ کریں۔",
+"settingsDeleteAccountAction": "کھاتہ حذف کریں",
+
+  "welcomeInitializingHealthcare": "آپ کا ہیلتھ کیئر تجربہ شروع کیا جا رہا ہے...",
+  "welcomeReadyToConnect": "آپ کی دیکھ بھال سے جڑنے کے لیے تیار!",
+  "welcomeBackendNotHealthyWarning": "بیک اینڈ سروس درست کام نہیں کر رہی۔ ایپلیکیشن کی صلاحیتیں محدود ہیں۔",
+  "welcomeContinue": "جاری رکھیں",
+  "welcomeComplianceBadgeHipaa": "🔒 HIPAA کے مطابق",
+  "welcomeComplianceBadgeWcag": "♿ WCAG AA",
+  "welcomeComplianceBadgeSecure": "🛡️ محفوظ",
+  "welcome_subtitle": "دیکھ بھال کو جوڑنا، صحت کو مضبوط بنانا",
+  "welcome_description": "آپ کا ہیلتھ کیئر ساتھی برائے",
+  "welcome_tagline": "بہتر دیکھ بھال • بہتر نتائج • بہتر زندگی",
+
+
+  "login_tagline": "خیال کے ساتھ جڑیں، اعتماد کے ساتھ ٹریک کریں",
+  "login_signInTitle": "اپنے اکاؤنٹ میں سائن ان کریں",
+  "login_signInSubtitle": "CareConnect تک رسائی کے لیے اپنی تفصیلات درج کریں",
+  "login_usernameLabel": "صارف نام",
+  "login_usernameHint": "اپنا صارف نام درج کریں",
+  "login_passwordLabel": "پاس ورڈ",
+  "login_passwordHint": "اپنا پاس ورڈ درج کریں",
+  "login_forgotPassword": "پاس ورڈ بھول گئے؟",
+  "login_signInCta": "سائن ان کریں",
+  "login_noAccountPrompt": "اکاؤنٹ نہیں ہے؟",
+  "login_createAccountCta": "اکاؤنٹ بنائیں",
+  "login_badgeSecure": "محفوظ",
+  "login_badgeHipaa": "HIPAA کے مطابق",
+  "login_badgeAccessible": "قابل رسائی",
+  "login_e2eEncrypted": "اینڈ ٹو اینڈ خفیہ",
+  "login_wcagAACompliant": "WCAG AA کے مطابق"
+
+
+}
