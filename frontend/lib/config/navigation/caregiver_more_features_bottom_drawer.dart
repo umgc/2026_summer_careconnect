@@ -1,5 +1,6 @@
 import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.dart';
 import 'package:care_connect_app/features/invoices/screens/dashboard/invoice_dashboard_page.dart';
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:care_connect_app/pages/settings_page.dart';
 import 'package:care_connect_app/shared/widgets/more_features_bottom_drawer.dart';
 import 'package:flutter/material.dart';
@@ -12,12 +13,13 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final List<FeatureItem> features = [
       FeatureItem(
         icon: Icons.calendar_month_outlined,
         iconColor: Colors.blue,
-        title: 'Calendar Assistant',
-        subtitle: 'Manage your Calendar Assistant Settings',
+        title: t.caregivernavdrawer_calendarAssistantTitle,
+        subtitle: t.caregivernavdrawer_calendarAssistantSubtitle,
         onTap: () {
           Navigator.pop(context);
           Navigator.push(
@@ -46,8 +48,8 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
       FeatureItem(
         icon: Icons.payments,
         iconColor: Colors.blue,
-        title: 'Invoice Assistant',
-        subtitle: 'Manage your medical invoices.',
+        title: t.caregivernavdrawer_invoiceManagerTitle,
+        subtitle: t.caregivernavdrawer_invoiceManagerSubtitle,
         onTap: () {
           Navigator.pop(context);
           Navigator.push(
@@ -61,8 +63,8 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
       FeatureItem(
         icon: Icons.note_alt,
         iconColor: Colors.blue,
-        title: 'Medical Notetaker',
-        subtitle: 'View Notetaker Notes',
+        title: t.caregivernavdrawer_medNotetakerTitle,
+        subtitle: t.caregivernavdrawer_medNotetakerSubtitle,
         onTap: () {
           Navigator.pop(context);
           Navigator.push(
@@ -76,8 +78,8 @@ class CaregiverMoreFeaturesBottomDrawerWidget extends StatelessWidget {
       FeatureItem(
         icon: Icons.settings,
         iconColor: Colors.blue,
-        title: 'Settings',
-        subtitle: 'Manage application settings.',
+        title: t.caregivernavdrawer_settingsTitle,
+        subtitle: t.caregivernavdrawer_settingsSubtitle,
         onTap: () {
           Navigator.pop(context);
           Navigator.push(

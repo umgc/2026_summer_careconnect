@@ -16,6 +16,7 @@ import 'package:care_connect_app/features/tasks/presentation/calendar_assisiant.
 import 'package:care_connect_app/features/tasks/presentation/custom_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/pre_defined_task_screen.dart';
 import 'package:care_connect_app/features/tasks/presentation/tasks_screen.dart';
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:care_connect_app/pages/notetaker_configuration_page.dart';
 import 'package:care_connect_app/pages/profile_page.dart';
 import 'package:care_connect_app/pages/settings_page.dart';
@@ -171,7 +172,7 @@ final GoRouter appRouter = GoRouter(
                   userRole: 'ADMIN',
                   userId: userData.userId,
                   showAppBar: true,
-                  appBarTitle: 'Admin Dashboard',
+                  appBarTitle: AppLocalizations.of(context)?.approuter_adminDashTitle,
                   primaryColor: Colors.red,
                 );
                 break;
@@ -180,9 +181,9 @@ final GoRouter appRouter = GoRouter(
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   context.go('/login');
                 });
-                return const Scaffold(
+                return Scaffold(
                   body: Center(
-                    child: Text('Unknown user role. Redirecting to login...'),
+                    child: Text(AppLocalizations.of(context)!.approuter_unknownRoleRedirect),
                   ),
                 );
             }
@@ -208,11 +209,11 @@ final GoRouter appRouter = GoRouter(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Invalid user ID'),
+                  Text(AppLocalizations.of(context)!.approuter_invalidUserIdText),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () => context.go('/login'),
-                    child: const Text('Go to Login'),
+                    child: Text(AppLocalizations.of(context)!.approuter_returnToLoginButton),
                   ),
                 ],
               ),
@@ -251,11 +252,11 @@ final GoRouter appRouter = GoRouter(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Invalid caregiver ID'),
+                  Text(AppLocalizations.of(context)!.approuter_invalidCaregiverIdText),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () => context.go('/login'),
-                    child: const Text('Go to Login'),
+                    child: Text(AppLocalizations.of(context)!.approuter_returnToLoginButton),
                   ),
                 ],
               ),
@@ -289,11 +290,11 @@ final GoRouter appRouter = GoRouter(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Invalid caregiver ID'),
+                  Text(AppLocalizations.of(context)!.approuter_invalidCaregiverIdText),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () => context.go('/login'),
-                    child: const Text('Go to Login'),
+                    child: Text(AppLocalizations.of(context)!.approuter_returnToLoginButton),
                   ),
                 ],
               ),
@@ -366,12 +367,12 @@ final GoRouter appRouter = GoRouter(
         final token = state.uri.queryParameters['token'];
         // Add redirect if no token
         if (token == null || token.isEmpty) {
-          return const Scaffold(
+          return Scaffold(
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Invalid or missing reset token'),
+                  Text(AppLocalizations.of(context)!.approuter_invalidResetToken),
                   SizedBox(height: 16),
                   BackButton(color: Colors.blue),
                 ],
@@ -468,7 +469,7 @@ final GoRouter appRouter = GoRouter(
           WidgetsBinding.instance.addPostFrameCallback((_) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(const SnackBar(content: Text('Invalid patient ID')));
+            ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.approuter_invalidPatientId)));
 
             // Redirect to appropriate dashboard based on role
             if (userRole != null) {
@@ -505,7 +506,7 @@ final GoRouter appRouter = GoRouter(
           // Show error message but stay logged in
           WidgetsBinding.instance.addPostFrameCallback((_) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Invalid or missing patient ID')),
+              SnackBar(content: Text(AppLocalizations.of(context)!.approuter_redirectingText)),
             );
 
             // Redirect to appropriate dashboard based on role
@@ -518,7 +519,7 @@ final GoRouter appRouter = GoRouter(
 
           return Scaffold(
             appBar: AppBar(
-              title: const Text('Redirecting...'),
+              title: Text(AppLocalizations.of(context)!.approuter_redirectingText),
               backgroundColor: const Color(0xFF14366E),
             ),
             body: const Center(child: CircularProgressIndicator()),
@@ -527,8 +528,8 @@ final GoRouter appRouter = GoRouter(
 
         final patientId = int.tryParse(patientIdStr);
         if (patientId == null) {
-          return const Scaffold(
-            body: Center(child: Text('Invalid patientId.')),
+          return Scaffold(
+            body: Center(child: Text(AppLocalizations.of(context)!.approuter_invalidPatientId)),
           );
         }
         return AnalyticsPage(patientId: patientId);
@@ -571,8 +572,8 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) {
         final patientId = int.tryParse(state.uri.queryParameters['patientId'] ?? '');
         if (patientId == null) {
-          return const Scaffold(
-            body: Center(child: Text('Invalid patient ID')),
+          return Scaffold(
+            body: Center(child: Text(AppLocalizations.of(context)!.approuter_invalidPatientId)),
           );
         }
         return StartVisitPage(patientId: patientId);
@@ -584,8 +585,8 @@ final GoRouter appRouter = GoRouter(
         final patientId = int.tryParse(state.uri.queryParameters['patientId'] ?? '');
         final serviceType = state.uri.queryParameters['serviceType'] ?? '';
         if (patientId == null || serviceType.isEmpty) {
-          return const Scaffold(
-            body: Center(child: Text('Invalid parameters')),
+          return Scaffold(
+            body: Center(child: Text(AppLocalizations.of(context)!.approuter_invalidPatientId)),
           );
         }
         return CheckinLocationPage(
@@ -606,8 +607,8 @@ final GoRouter appRouter = GoRouter(
         final accuracyM = double.tryParse(state.uri.queryParameters['accuracyM'] ?? '');
         
         if (patientId == null || serviceType.isEmpty || locationType.isEmpty) {
-          return const Scaffold(
-            body: Center(child: Text('Invalid parameters')),
+          return Scaffold(
+            body: Center(child: Text(AppLocalizations.of(context)!.approuter_evvInvalidParam)),
           );
         }
         
@@ -637,8 +638,8 @@ final GoRouter appRouter = GoRouter(
         final scheduledVisitId = int.tryParse(state.uri.queryParameters['scheduledVisitId'] ?? '');
         
         if (patientId == null || serviceType.isEmpty || locationType.isEmpty) {
-          return const Scaffold(
-            body: Center(child: Text('Invalid parameters')),
+          return Scaffold(
+            body: Center(child: Text(AppLocalizations.of(context)!.approuter_evvInvalidParam)),
           );
         }
         
@@ -676,8 +677,8 @@ final GoRouter appRouter = GoRouter(
         final scheduledVisitId = int.tryParse(state.uri.queryParameters['scheduledVisitId'] ?? '');
         
         if (patientId == null || serviceType.isEmpty || checkinLocationType.isEmpty || checkoutLocationType.isEmpty) {
-          return const Scaffold(
-            body: Center(child: Text('Invalid parameters')),
+          return Scaffold(
+            body: Center(child: Text(AppLocalizations.of(context)!.approuter_evvInvalidParam)),
           );
         }
         
@@ -717,8 +718,8 @@ final GoRouter appRouter = GoRouter(
         final checkoutTimeStr = state.uri.queryParameters['checkoutTime'] ?? '';
         
         if (patientId == null || serviceType.isEmpty || checkinLocationType.isEmpty || checkoutLocationType.isEmpty) {
-          return const Scaffold(
-            body: Center(child: Text('Invalid parameters')),
+          return Scaffold(
+            body: Center(child: Text(AppLocalizations.of(context)!.approuter_evvInvalidParam)),
           );
         }
         
@@ -796,8 +797,8 @@ final GoRouter appRouter = GoRouter(
         final noteId = state.pathParameters['noteId'];
         final extra = state.extra;
         if (noteId == null || extra == null || extra is! PatientNote) {
-          return const Scaffold(
-            body: Center(child: Text('Invalid note ID or missing note data')),
+          return Scaffold(
+            body: Center(child: Text(AppLocalizations.of(context)!.approuter_invalidNoteID)),
           );
         }
         final note = extra;

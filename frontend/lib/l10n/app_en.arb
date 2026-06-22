@@ -138,7 +138,41 @@
   "login_badgeHipaa": "HIPAA Compliant",
   "login_badgeAccessible": "Accessible",
   "login_e2eEncrypted": "End-to-end encrypted",
-  "login_wcagAACompliant": "WCAG AA compliant"
+  "login_wcagAACompliant": "WCAG AA compliant",
+
+  "caregivernavdrawer_calendarAssistantTitle": "Calendar Assistant",
+  "caregivernavdrawer_calendarAssistantSubtitle": "Manage your Calendar Assistant Settings",
+  "caregivernavdrawer_invoiceManagerTitle": "Invoice Assistant",
+  "caregivernavdrawer_invoiceManagerSubtitle": "Manage your medical invoices.",
+  "caregivernavdrawer_medNotetakerTitle": "Medical Notetaker",
+  "caregivernavdrawer_medNotetakerSubtitle": "View Notetaker Notes",
+  "caregivernavdrawer_settingsTitle": "Settings",
+  "caregivernavdrawer_settingsSubtitle": "Manage application settings.",
+
+  "patientnavdrawer_sosTitle": "SOS",
+  "patientnavdrawer_sosSubtitle": "Informing Caregiver of emergency",
+  "patientnavdrawer_medTrackerTitle": "Medication Tracker",
+  "patientnavdrawer_medTrackerSubtitle": "Track your medications and schedules",
+  "patientnavdrawer_calendarAssistantTitle": "Calendar Assistant",
+  "patientnavdrawer_calendarAssistantSubtitle": "Manage your Calendar Assistant Settings",
+  "patientnavdrawer_informedDeliveryTitle": "Informed Delivery",
+  "patientnavdrawer_informedDeliverySubtitle": "View your Infomred Deliver digest",
+  "patientnavdrawer_virtualCheckinTitle": "Virtual Check-In",
+  "patientnavdrawer_virtualCheckinSubtitle": "Virtual Check-In",
+
+  "navhelper_adminDashTitle": "Admin Dashboard",
+
+  "approuter_adminDashTitle": "Admin Dashboard",
+  "approuter_unknownRoleRedirect": "Unknown user role. Redirecting to login...",
+  "approuter_invalidUserIdText": "Invalid user ID",
+  "approuter_invalidCaregiverIdText": "Invalid caregiver ID",
+  "approuter_returnToLoginButton": "Go to Login",
+  "approuter_invalidResetToken": "Invalid or missing reset token",
+  "approuter_invalidPatientId": "Invalid patient ID",
+  "approuter_invalidPatientIdNotification": "Invalid or missing patient ID",
+  "approuter_redirectingText": "Redirecting...",
+  "approuter_evvInvalidParam": "Invalid parameters",
+  "approuter_invalidNoteID": "Invalid note ID or missing note data"
 
 
 }
