@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/features/activities/models/client_activity_model.dart';
@@ -52,7 +53,7 @@ class _ClientActivityIconScreenState extends State<ClientActivityIconScreen> {
       } else {
         if (mounted) {
           setState(() {
-            _error = 'Failed to load: ${res.statusCode}';
+            _error = '${AppLocalizations.of(context)!.clientactivityicon_failedToLoadError}: ${res.statusCode}';
             _loading = false;
           });
         }
@@ -60,7 +61,7 @@ class _ClientActivityIconScreenState extends State<ClientActivityIconScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Error: $e';
+          _error = '${AppLocalizations.of(context)!.clientactivityicon_errorText}: $e';
           _loading = false;
         });
       }
@@ -85,18 +86,18 @@ class _ClientActivityIconScreenState extends State<ClientActivityIconScreen> {
       if (!mounted) return;
       if (res.statusCode == 429) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Already logged recently')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.clientactivityicon_alreadyLoggedNotification)),
         );
         return;
       }
       if (res.statusCode >= 200 && res.statusCode < 300) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${activity.name} logged')),
+          SnackBar(content: Text('${activity.name} ${AppLocalizations.of(context)!.clientactivityicon_activityLoggedNotification}')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to log: ${res.statusCode}'),
+            content: Text('${AppLocalizations.of(context)!.clientactivityicon_failedToLogError}: ${res.statusCode}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -105,7 +106,7 @@ class _ClientActivityIconScreenState extends State<ClientActivityIconScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text('${AppLocalizations.of(context)!.clientactivityicon_errorText}: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -121,7 +122,7 @@ class _ClientActivityIconScreenState extends State<ClientActivityIconScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Tap to log activity'),
+            Text(AppLocalizations.of(context)!.clientactivityicon_tapToLogActivityText),
             Text(
               widget.clientName,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -144,7 +145,7 @@ class _ClientActivityIconScreenState extends State<ClientActivityIconScreen> {
                         const SizedBox(height: 16),
                         FilledButton(
                           onPressed: _load,
-                          child: const Text('Retry'),
+                          child: Text(AppLocalizations.of(context)!.clientactivityicon_retryButton),
                         ),
                       ],
                     ),
@@ -155,7 +156,7 @@ class _ClientActivityIconScreenState extends State<ClientActivityIconScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(24),
                         child: Text(
-                          'No activities enabled. Ask your caregiver to enable activities.',
+                          AppLocalizations.of(context)!.clientactivityicon_noActivitesEnabled,
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodyLarge,
                         ),

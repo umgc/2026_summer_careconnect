@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/features/activities/models/client_activity_model.dart';
@@ -104,10 +105,10 @@ class _ClientCategoryActivitiesScreenState
           });
         }
       } else {
-        if (mounted) setState(() => _error = 'Failed to load: ${res.statusCode}');
+        if (mounted) setState(() => _error = '${AppLocalizations.of(context)!.clientcatagoryactivity_failedToLoadError}: ${res.statusCode}');
       }
     } catch (e) {
-      if (mounted) setState(() => _error = 'Error: $e');
+      if (mounted) setState(() => _error = '${AppLocalizations.of(context)!.clientcatagoryactivity_errorText}: $e');
     }
   }
 
@@ -160,14 +161,14 @@ class _ClientCategoryActivitiesScreenState
   List<Activity> _defaultActivitiesForCategory(String category) {
     final c = category.toUpperCase().trim();
     if (c == 'ADL') {
-      const names = <String>[
-        'Bathing',
-        'Dressing',
-        'Toileting',
-        'Transferring',
-        'Mobility/Ambulation',
-        'Eating',
-        'Personal Hygiene & Grooming',
+      var names = <String>[
+        AppLocalizations.of(context)!.clientcatagoryactivity_bathingText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_dressingText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_toiletingText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_transferringText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_mobilityText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_eatingText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_hygieneText,
       ];
       return List<Activity>.generate(
         names.length,
@@ -175,17 +176,17 @@ class _ClientCategoryActivitiesScreenState
       );
     }
     if (c == 'IADL') {
-      const names = <String>[
-        'Meal Preparation',
-        'Housekeeping',
-        'Laundry',
-        'Medication Management',
-        'Money Management',
-        'Transportation',
-        'Communication',
-        'Community Participation',
-        'Shopping',
-        'Safety Awareness',
+      var names = <String>[
+        AppLocalizations.of(context)!.clientcatagoryactivity_mealPrepText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_housekeepingText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_laundryText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_medManagementText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_moneyManagementText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_transportationText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_communicationText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_communityParticText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_shoppingText,
+        AppLocalizations.of(context)!.clientcatagoryactivity_safetyAwarenessText,
       ];
       return List<Activity>.generate(
         names.length,
@@ -254,14 +255,14 @@ class _ClientCategoryActivitiesScreenState
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to update: ${res.statusCode}')),
+            SnackBar(content: Text('${AppLocalizations.of(context)!.clientcatagoryactivity_failedToUpdateError}: ${res.statusCode}')),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)!.clientcatagoryactivity_errorText}: $e')),
         );
       }
     } finally {
@@ -277,7 +278,7 @@ class _ClientCategoryActivitiesScreenState
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('${widget.category} Activities'),
+            Text('${widget.category} ${AppLocalizations.of(context)!.clientcatagoryactivity_activitiesText}'),
             Text(
               widget.clientName,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -295,11 +296,11 @@ class _ClientCategoryActivitiesScreenState
             child: Row(
               children: [
                 Expanded(
-                  child: _segment('Log Activities', _modeLog),
+                  child: _segment(AppLocalizations.of(context)!.clientcatagoryactivity_logActivitiesText, _modeLog),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _segment('Manage Activities', _modeManage),
+                  child: _segment(AppLocalizations.of(context)!.clientcatagoryactivity_manageActivitiesText, _modeManage),
                 ),
               ],
             ),
@@ -359,11 +360,11 @@ class _ClientCategoryActivitiesScreenState
     }
     final enabled = _enabledForLog;
     if (enabled.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
-            'No activities enabled. Switch to Manage Activities to enable some.',
+            AppLocalizations.of(context)!.clientcatagoryactivity_noActivitiesEnabled,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16),
           ),
@@ -388,11 +389,11 @@ class _ClientCategoryActivitiesScreenState
       );
     }
     if (_allActivities.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
-            'No activities defined for this category.',
+            AppLocalizations.of(context)!.clientcatagoryactivity_noActivitiesDefined,
             textAlign: TextAlign.center,
           ),
         ),
@@ -449,14 +450,14 @@ class _ClientCategoryActivitiesScreenState
       return AuthNetworkImage(
         url: url,
         fallback: Icon(
-          iconForActivityName(act.name, act.category),
+          iconForActivityName(act.name, act.category, context),
           size: 48,
           color: Theme.of(context).colorScheme.primary,
         ),
       );
     }
     return Icon(
-      iconForActivityName(act.name, act.category),
+      iconForActivityName(act.name, act.category, context),
       size: 48,
       color: Theme.of(context).colorScheme.primary,
     );

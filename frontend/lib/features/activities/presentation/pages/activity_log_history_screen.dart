@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/features/activities/models/client_activity_model.dart';
@@ -78,6 +79,7 @@ class _ActivityLogHistoryScreenState extends State<ActivityLogHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
@@ -85,7 +87,7 @@ class _ActivityLogHistoryScreenState extends State<ActivityLogHistoryScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Activity log history'),
+            Text(t.activityloghistory_pageTitle),
             Text(
               widget.clientName,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -110,7 +112,7 @@ class _ActivityLogHistoryScreenState extends State<ActivityLogHistoryScreen> {
                           const SizedBox(height: 16),
                           FilledButton(
                             onPressed: _load,
-                            child: const Text('Retry'),
+                            child: Text(t.activityloghistory_retryButton),
                           ),
                         ],
                       ),
@@ -121,7 +123,7 @@ class _ActivityLogHistoryScreenState extends State<ActivityLogHistoryScreen> {
                         child: Padding(
                           padding: const EdgeInsets.all(24),
                           child: Text(
-                            'No activity logs yet. Log activities from ADL or IADL screens.',
+                            t.activityloghistory_noLogsText,
                             textAlign: TextAlign.center,
                             style: theme.textTheme.bodyLarge,
                           ),
@@ -140,7 +142,7 @@ class _ActivityLogHistoryScreenState extends State<ActivityLogHistoryScreen> {
                               title: Text(
                                 log.activityName?.isNotEmpty == true
                                     ? log.activityName!
-                                    : 'Activity #${log.activityId}',
+                                    : '${t.activityloghistory_activityListTitleText} #${log.activityId}',
                                 style: const TextStyle(fontWeight: FontWeight.w600),
                               ),
                               subtitle: Column(
@@ -148,11 +150,11 @@ class _ActivityLogHistoryScreenState extends State<ActivityLogHistoryScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   const SizedBox(height: 4),
-                                  Text('Competency: ${log.competencyScore}'),
+                                  Text('${t.activityloghistory_activityListCompetencyText}: ${log.competencyScore}'),
                                   if (satisfaction.isNotEmpty)
-                                    Text('Satisfaction: $satisfaction'),
+                                    Text('${t.activityloghistory_activityListSatisfactionText}: $satisfaction'),
                                   if (log.notes != null && log.notes!.isNotEmpty)
-                                    Text('Notes: ${log.notes}'),
+                                    Text('${t.activityloghistory_activityListNotesText}: ${log.notes}'),
                                   const SizedBox(height: 4),
                                   Text(
                                     dateStr,

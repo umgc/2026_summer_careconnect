@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:care_connect_app/services/api_service.dart';
@@ -64,7 +65,7 @@ class _BehavioralIncidentFormScreenState extends State<BehavioralIncidentFormScr
       if (res.statusCode >= 200 && res.statusCode < 300) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Behavioral incident logged')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.behavioralincident_behavLogNotification)),
         );
         Navigator.of(context).pushReplacement(
           MaterialPageRoute<void>(
@@ -79,7 +80,7 @@ class _BehavioralIncidentFormScreenState extends State<BehavioralIncidentFormScr
         final body = res.body;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to log incident: ${res.statusCode}${body.isNotEmpty ? " — $body" : ""}'),
+            content: Text('${AppLocalizations.of(context)!.behavioralincident_behavLogFailedNotification}: ${res.statusCode}${body.isNotEmpty ? " — $body" : ""}'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -88,7 +89,7 @@ class _BehavioralIncidentFormScreenState extends State<BehavioralIncidentFormScr
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: $e'),
+          content: Text('Error${AppLocalizations.of(context)!.behavioralincident_behavLogErrorNotification}: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -107,7 +108,7 @@ class _BehavioralIncidentFormScreenState extends State<BehavioralIncidentFormScr
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Log Behavior'),
+            Text(AppLocalizations.of(context)!.behavioralincident_logBehavTitle),
             Text(
               widget.clientName,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -126,22 +127,22 @@ class _BehavioralIncidentFormScreenState extends State<BehavioralIncidentFormScr
             children: [
               TextFormField(
                 controller: _behaviorController,
-                decoration: const InputDecoration(
-                  labelText: 'Observed Behavior',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.behavioralincident_observedBehavDeco,
                   alignLabelWithHint: true,
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 5,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please describe the observed behavior';
+                    return AppLocalizations.of(context)!.behavioralincident_emptyBehavError;
                   }
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Text(
-                'When did this occur?',
+                AppLocalizations.of(context)!.behavioralincident_whenBehavOccurTitle,
                 style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
@@ -153,8 +154,8 @@ class _BehavioralIncidentFormScreenState extends State<BehavioralIncidentFormScr
               const SizedBox(height: 16),
               TextFormField(
                 controller: _triggerController,
-                decoration: const InputDecoration(
-                  labelText: 'Possible causes or context — optional',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context)!.behavioralincident_optiPossibleCauseDeco,
                   alignLabelWithHint: true,
                   border: OutlineInputBorder(),
                 ),
@@ -169,7 +170,7 @@ class _BehavioralIncidentFormScreenState extends State<BehavioralIncidentFormScr
                         width: 24,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Log Behavior'),
+                    : Text(AppLocalizations.of(context)!.behavioralincident_logBehavTitle),
               ),
             ],
           ),
@@ -225,7 +226,7 @@ class _BehavioralIncidentHistoryScreenState extends State<BehavioralIncidentHist
       } else {
         if (mounted) {
           setState(() {
-            _error = 'Failed to load: ${res.statusCode}';
+            _error = '${AppLocalizations.of(context)!.behavioralincident_failedLoadError}: ${res.statusCode}';
             _loading = false;
           });
         }
@@ -233,7 +234,7 @@ class _BehavioralIncidentHistoryScreenState extends State<BehavioralIncidentHist
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Error: $e';
+          _error = '${AppLocalizations.of(context)!.behavioralincident_behavLogErrorNotification}: $e';
           _loading = false;
         });
       }
@@ -249,7 +250,7 @@ class _BehavioralIncidentHistoryScreenState extends State<BehavioralIncidentHist
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Behavioral history'),
+            Text(AppLocalizations.of(context)!.behavioralincident_behavHistoryTitle),
             Text(
               widget.clientName,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -274,7 +275,7 @@ class _BehavioralIncidentHistoryScreenState extends State<BehavioralIncidentHist
                           const SizedBox(height: 16),
                           FilledButton(
                             onPressed: _load,
-                            child: const Text('Retry'),
+                            child: Text(AppLocalizations.of(context)!.behavioralincident_retryButton),
                           ),
                         ],
                       ),
@@ -285,7 +286,7 @@ class _BehavioralIncidentHistoryScreenState extends State<BehavioralIncidentHist
                         child: Padding(
                           padding: const EdgeInsets.all(24),
                           child: Text(
-                            'No behavioral incidents logged yet.',
+                            AppLocalizations.of(context)!.behavioralincident_noBehavLoggedText,
                             textAlign: TextAlign.center,
                             style: theme.textTheme.bodyLarge,
                           ),

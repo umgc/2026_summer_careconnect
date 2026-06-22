@@ -1,3 +1,4 @@
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/features/activities/presentation/pages/client_category_activities_screen.dart';
 import 'package:care_connect_app/features/activities/presentation/pages/activity_log_history_screen.dart';
@@ -16,6 +17,7 @@ class AdlIadlManagementScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
@@ -23,7 +25,7 @@ class AdlIadlManagementScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('ADL & IADL Management'),
+            Text(t.adlIadlManagement_pageTitle),
             Text(
               clientName,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -39,8 +41,8 @@ class AdlIadlManagementScreen extends StatelessWidget {
           _buildEntryCard(
             context,
             icon: Icons.bathtub,
-            title: 'ADL Activities',
-            subtitle: 'Log and manage Activities of Daily Living',
+            title: t.adlIadlManagement_adlTitle,
+            subtitle: t.adlIadlManagement_adlSubtitle,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -57,8 +59,8 @@ class AdlIadlManagementScreen extends StatelessWidget {
           _buildEntryCard(
             context,
             icon: Icons.soup_kitchen,
-            title: 'IADL Activities',
-            subtitle: 'Log and manage Instrumental Activities of Daily Living',
+            title: t.adlIadlManagement_iadlTitle,
+            subtitle: t.adlIadlManagement_iadlSubtitle,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
@@ -75,8 +77,8 @@ class AdlIadlManagementScreen extends StatelessWidget {
           _buildEntryCard(
             context,
             icon: Icons.history,
-            title: 'Activity log history',
-            subtitle: 'View logged activities for this client',
+            title: t.adlIadlManagement_activityLogTitle,
+            subtitle: t.adlIadlManagement_activityLogSubtitle,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute<void>(

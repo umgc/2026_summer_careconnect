@@ -1,3 +1,4 @@
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -62,7 +63,8 @@ class NavigationHelper {
   }
 
   /// Get MainScreenConfig based on stored user data
-  static Future<MainScreenConfig?> getMainScreenConfig() async {
+  static Future<MainScreenConfig?> getMainScreenConfig(BuildContext context) async {
+    final t = AppLocalizations.of(context)!;
     final userData = await UserRoleStorageService.instance.getUserData();
 
     if (userData == null || !userData.isLoggedIn || userData.userId <= 0) {
@@ -91,7 +93,7 @@ class NavigationHelper {
           userRole: 'ADMIN',
           userId: userData.userId,
           showAppBar: true,
-          appBarTitle: 'Admin Dashboard',
+          appBarTitle: t.navhelper_adminDashTitle,
           primaryColor: Colors.red,
         );
       default:

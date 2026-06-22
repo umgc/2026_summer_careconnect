@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/features/activities/models/client_activity_model.dart';
@@ -62,13 +63,13 @@ class _ClientActivitiesSectionState extends State<ClientActivitiesSection>
         });
       } else {
         setState(() {
-          _error = 'Failed to load activities: ${res.statusCode}';
+          _error = '${AppLocalizations.of(context)!.clientactiviteswidget_failedToLoadActivities}: ${res.statusCode}';
           _loading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _error = 'Error: $e';
+        _error = '${AppLocalizations.of(context)!.clientactiviteswidget_errorText}: $e';
         _loading = false;
       });
     }
@@ -96,7 +97,7 @@ class _ClientActivitiesSectionState extends State<ClientActivitiesSection>
                 Icon(Icons.self_improvement, color: theme.colorScheme.primary, size: 22),
                 const SizedBox(width: 8),
                 Text(
-                  'Activities',
+                  AppLocalizations.of(context)!.clientactiviteswidget_activitiesText,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),

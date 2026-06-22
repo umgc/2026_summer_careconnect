@@ -51,7 +51,7 @@ class _EnhancedPatientNotesWidgetState
   void initState() {
     super.initState();
     _loadPatientFiles();
-    _fileHandler = FileHandlerFactory.create();
+    _fileHandler = FileHandlerFactory.create(context);
   }
 
   @override

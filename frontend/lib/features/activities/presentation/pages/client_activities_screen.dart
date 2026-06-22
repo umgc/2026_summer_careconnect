@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:care_connect_app/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:care_connect_app/services/api_service.dart';
 import 'package:care_connect_app/features/activities/models/client_activity_model.dart';
@@ -57,13 +58,13 @@ class _ClientActivitiesScreenState extends State<ClientActivitiesScreen>
         });
       } else {
         setState(() {
-          _error = 'Failed to load activities: ${res.statusCode}';
+          _error = '${AppLocalizations.of(context)!.clientactivites_failedToLoadError}: ${res.statusCode}';
           _loading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _error = 'Error: $e';
+        _error = '${AppLocalizations.of(context)!.clientactivites_errorText}: $e';
         _loading = false;
       });
     }
@@ -131,11 +132,11 @@ class ActivitiesGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (activities.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
-            'No activities enabled. Switch to Manage Activities to enable some.',
+            AppLocalizations.of(context)!.clientactivites_noActivitesEnabledText,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16),
           ),
@@ -177,7 +178,7 @@ class ActivitiesGrid extends StatelessWidget {
         onLogged: () {
           Navigator.of(ctx).pop();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Activity logged')),
+            SnackBar(content: Text(AppLocalizations.of(context)!.clientactivites_activitesLoggedNotification)),
           );
         },
         onError: (String message) {
@@ -207,7 +208,7 @@ class _ActivityCard extends StatelessWidget {
         child: AuthNetworkImage(
           url: iconUrl,
           fallback: Icon(
-            iconForActivityName(activity.name, activity.category),
+            iconForActivityName(activity.name, activity.category, context),
             size: 48,
             color: Theme.of(context).colorScheme.primary,
           ),
@@ -215,7 +216,7 @@ class _ActivityCard extends StatelessWidget {
       );
     } else {
       iconWidget = Icon(
-        iconForActivityName(activity.name, activity.category),
+        iconForActivityName(activity.name, activity.category, context),
         size: 48,
         color: Theme.of(context).colorScheme.primary,
       );
@@ -308,7 +309,7 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
         if (mounted) {
           setState(() {
             _scale = scale.isNotEmpty ? scale : _defaultScale();
-            _scaleError = scale.isNotEmpty ? null : 'Using default competency scale';
+            _scaleError = scale.isNotEmpty ? null : AppLocalizations.of(context)!.clientactivites_loadScaleDefault;
             _loadingScale = false;
           });
         }
@@ -316,7 +317,7 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
         if (mounted) {
           setState(() {
             _scale = _defaultScale();
-            _scaleError = 'Using default competency scale (GET failed: ${res.statusCode})';
+            _scaleError = '${AppLocalizations.of(context)!.clientactivites_loadScaleDefault} (GET failed: ${res.statusCode})';
             _loadingScale = false;
           });
         }
@@ -325,7 +326,7 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
       if (mounted) {
         setState(() {
           _scale = _defaultScale();
-          _scaleError = 'Using default competency scale (network error)';
+          _scaleError = '${AppLocalizations.of(context)!.clientactivites_loadScaleDefault} (network error)';
           _loadingScale = false;
         });
       }
@@ -333,12 +334,12 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
   }
 
   List<CompetencyScaleItem> _defaultScale() {
-    return const [
-      CompetencyScaleItem(value: 1, label: 'Total Assistance'),
-      CompetencyScaleItem(value: 2, label: 'Maximum Assistance'),
-      CompetencyScaleItem(value: 3, label: 'Moderate Assistance'),
-      CompetencyScaleItem(value: 4, label: 'Minimal Assistance'),
-      CompetencyScaleItem(value: 5, label: 'Independent'),
+    return [
+      CompetencyScaleItem(value: 1, label: AppLocalizations.of(context)!.clientactivites_scale1Text),
+      CompetencyScaleItem(value: 2, label: AppLocalizations.of(context)!.clientactivites_scale2Text),
+      CompetencyScaleItem(value: 3, label: AppLocalizations.of(context)!.clientactivites_scale3Text),
+      CompetencyScaleItem(value: 4, label: AppLocalizations.of(context)!.clientactivites_scale4Text),
+      CompetencyScaleItem(value: 5, label: AppLocalizations.of(context)!.clientactivites_scale5Text),
     ];
   }
 
@@ -358,10 +359,10 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
         widget.onLogged();
       } else {
         final body = res.body;
-        widget.onError('Failed to log: ${res.statusCode}${body.isNotEmpty ? " — $body" : ""}');
+        widget.onError('${AppLocalizations.of(context)!.clientactivites_failedToLogError}: ${res.statusCode}${body.isNotEmpty ? " — $body" : ""}');
       }
     } catch (e) {
-      widget.onError('Error: $e');
+      widget.onError('${AppLocalizations.of(context)!.clientactivites_errorText}: $e');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -390,8 +391,8 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
                 ),
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Competency Score',
+              Text(
+                AppLocalizations.of(context)!.clientactivites_competencyScoreTitle,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 16,
@@ -399,7 +400,7 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                'How independently did the client perform this activity?',
+                AppLocalizations.of(context)!.clientactivites_competencyScoreText,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.grey.shade700,
                 ),
@@ -453,8 +454,8 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
                 ),
               ],
               const SizedBox(height: 24),
-              const Text(
-                'Client Satisfaction (optional)',
+              Text(
+                AppLocalizations.of(context)!.clientactivites_optiClientSatisfactionText,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 16,
@@ -502,7 +503,7 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
               ),
               const SizedBox(height: 24),
               Text(
-                'Notes (optional)',
+                AppLocalizations.of(context)!.clientactivites_optiNotesText,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -511,8 +512,8 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
               TextField(
                 controller: _notesController,
                 maxLines: 3,
-                decoration: const InputDecoration(
-                  hintText: 'Add any notes...',
+                decoration: InputDecoration(
+                  hintText: AppLocalizations.of(context)!.clientactivites_addNotesHintText,
                   border: OutlineInputBorder(),
                 ),
                 onChanged: (_) => setState(() {}),
@@ -526,7 +527,7 @@ class _LogActivitySheetState extends State<LogActivitySheet> {
                         width: 24,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Log Activity'),
+                    : Text(AppLocalizations.of(context)!.clientactivites_logActivityButton),
               ),
             ],
           ),
