@@ -372,6 +372,32 @@ class CallFlowIntegrationTest {
         }
 
         @Test
+        @DisplayName("CHIME-013: double POST /join same user is idempotent — single createAttendee (L5a)")
+        void joinCall_doubleJoinSameUser_idempotent() throws Exception {
+            String callId = "double-join-" + System.currentTimeMillis();
+
+            mockMvc.perform(post("/api/v3/calls/{callId}/join", callId)
+                            .with(user(caregiverUser.getEmail()).roles("CAREGIVER"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/v3/calls/{callId}/join", callId)
+                            .with(user(caregiverUser.getEmail()).roles("CAREGIVER"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isOk());
+
+            verify(chimeService, times(1)).createAttendee(
+                    eq(callId),
+                    eq(caregiverUser.getId().toString()),
+                    anyString(),
+                    anyString());
+        }
+
+        @Test
         @DisplayName("CHIME-003: Unauthenticated join → 401 or 403")
         void joinCall_unauthenticated_rejected() throws Exception {
             mockMvc.perform(post("/api/v3/calls/{callId}/join", CALL_ID)
