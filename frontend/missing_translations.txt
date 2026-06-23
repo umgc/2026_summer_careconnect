@@ -1,1 +1,53 @@
-{}
+{
+  "am": [
+    "testFallBackVariable"
+  ],
+
+  "ar": [
+    "testFallBackVariable"
+  ],
+
+  "bn": [
+    "testFallBackVariable"
+  ],
+
+  "es": [
+    "testFallBackVariable"
+  ],
+
+  "fa": [
+    "testFallBackVariable"
+  ],
+
+  "fr": [
+    "testFallBackVariable"
+  ],
+
+  "hi": [
+    "testFallBackVariable"
+  ],
+
+  "ja": [
+    "testFallBackVariable"
+  ],
+
+  "ne": [
+    "testFallBackVariable"
+  ],
+
+  "pt": [
+    "testFallBackVariable"
+  ],
+
+  "ru": [
+    "testFallBackVariable"
+  ],
+
+  "ur": [
+    "testFallBackVariable"
+  ],
+
+  "zh": [
+    "testFallBackVariable"
+  ]
+}
