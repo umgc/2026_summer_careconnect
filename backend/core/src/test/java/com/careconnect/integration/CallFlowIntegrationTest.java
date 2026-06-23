@@ -488,6 +488,150 @@ class CallFlowIntegrationTest {
                     anyString(),
                     anyString());
         }
+
+        @Test
+        @DisplayName("CHIME-013: end while invitee ringing notifies pending invitee")
+        void endWhileRinging_notifiesPendingInvitee() throws Exception {
+            String callId = "end-while-ringing-" + System.currentTimeMillis();
+
+            User familyUser = userRepository.findByEmail("family@integration.test")
+                    .orElseGet(() -> {
+                        User u = new User();
+                        u.setEmail("family@integration.test");
+                        u.setPassword("test-password-hash");
+                        u.setRole(Role.FAMILY_MEMBER);
+                        u.setName("Integration Family");
+                        return userRepository.save(u);
+                    });
+
+            if (!familyMemberLinkRepository.existsByFamilyUserAndPatientUserAndStatus(
+                    familyUser, patientUser, FamilyMemberLink.LinkStatus.ACTIVE)) {
+                FamilyMemberLink link = new FamilyMemberLink(
+                        familyUser, patientUser, caregiverUser, "Daughter");
+                link.setPatientId(patientUser.getId());
+                familyMemberLinkRepository.save(link);
+            }
+
+            mockMvc.perform(post("/api/v3/calls/{callId}/join", callId)
+                            .with(user(patientUser.getEmail()).roles("PATIENT"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/v3/calls/{callId}/join", callId)
+                            .with(user(caregiverUser.getEmail()).roles("CAREGIVER"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/v3/calls/{callId}/invite", callId)
+                            .with(user(caregiverUser.getEmail()).roles("CAREGIVER"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(
+                                    Map.of("targetUserId", familyUser.getId()))))
+                    .andExpect(status().isOk());
+
+            String endBody = objectMapper.writeValueAsString(Map.of(
+                    "otherPartyId", patientUser.getId().toString()));
+
+            mockMvc.perform(post("/api/v3/calls/{callId}/end", callId)
+                            .with(user(caregiverUser.getEmail()).roles("CAREGIVER"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(endBody))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("ended"));
+
+            verify(chimeService).endMeeting(callId);
+
+            List<CallTelemetryEvent> events = callTelemetryEventRepository
+                    .findByCallIdOrderByOccurredAtDesc(callId);
+            assertThat(events).anyMatch(e -> "CALL_END".equals(e.getEventType()));
+            assertThat(events).anyMatch(e ->
+                    "CONFERENCE_INVITE".equals(e.getEventType())
+                            && familyUser.getId().equals(e.getTargetUserId()));
+            assertThat(events).noneMatch(e ->
+                    "CALL_JOIN".equals(e.getEventType())
+                            && familyUser.getId().equals(e.getActorUserId()));
+        }
+
+        @Test
+        @DisplayName("CHIME-014: three-party conference end notifies remaining participant")
+        void threeParty_endNotifiesAllRemaining() throws Exception {
+            String callId = "three-party-end-" + System.currentTimeMillis();
+
+            User familyUser = userRepository.findByEmail("family@integration.test")
+                    .orElseGet(() -> {
+                        User u = new User();
+                        u.setEmail("family@integration.test");
+                        u.setPassword("test-password-hash");
+                        u.setRole(Role.FAMILY_MEMBER);
+                        u.setName("Integration Family");
+                        return userRepository.save(u);
+                    });
+
+            if (!familyMemberLinkRepository.existsByFamilyUserAndPatientUserAndStatus(
+                    familyUser, patientUser, FamilyMemberLink.LinkStatus.ACTIVE)) {
+                FamilyMemberLink link = new FamilyMemberLink(
+                        familyUser, patientUser, caregiverUser, "Daughter");
+                link.setPatientId(patientUser.getId());
+                familyMemberLinkRepository.save(link);
+            }
+
+            mockMvc.perform(post("/api/v3/calls/{callId}/join", callId)
+                            .with(user(patientUser.getEmail()).roles("PATIENT"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/v3/calls/{callId}/join", callId)
+                            .with(user(caregiverUser.getEmail()).roles("CAREGIVER"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/v3/calls/{callId}/join", callId)
+                            .with(user(familyUser.getEmail()).roles("FAMILY_MEMBER"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(post("/api/v3/calls/{callId}/end", callId)
+                            .with(user(caregiverUser.getEmail()).roles("CAREGIVER"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(
+                                    Map.of("otherPartyId", patientUser.getId().toString()))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("left"));
+
+            clearInvocations(chimeService);
+
+            mockMvc.perform(post("/api/v3/calls/{callId}/end", callId)
+                            .with(user(patientUser.getEmail()).roles("PATIENT"))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("ended"));
+
+            verify(chimeService).endMeeting(callId);
+
+            List<CallTelemetryEvent> events = callTelemetryEventRepository
+                    .findByCallIdOrderByOccurredAtDesc(callId);
+            assertThat(events).anyMatch(e ->
+                    "CALL_LEAVE".equals(e.getEventType())
+                            && caregiverUser.getId().equals(e.getActorUserId()));
+            assertThat(events).anyMatch(e ->
+                    "CALL_END".equals(e.getEventType())
+                            && patientUser.getId().equals(e.getActorUserId()));
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

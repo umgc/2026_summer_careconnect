@@ -65,6 +65,7 @@ public class CallController {
   private static final String EVT_CALL_JOIN = "CALL_JOIN";
   private static final String EVT_CALL_END = "CALL_END";
   private static final String EVT_CALL_LEAVE = "CALL_LEAVE";
+  private static final String EVT_CONFERENCE_INVITE = "CONFERENCE_INVITE";
   private static final String EVT_SENTIMENT_TEXT = "SENTIMENT_TEXT";
   private static final String EVT_SENTIMENT_VOICE = "SENTIMENT_VOICE";
   private static final String EVT_SENTIMENT_VIDEO = "SENTIMENT_VIDEO";
@@ -370,6 +371,33 @@ public class CallController {
     return activeParticipantIds;
   }
 
+  private Set<Long> resolvePendingInviteeIds(final String callId) {
+    final Set<Long> everJoined = new LinkedHashSet<>();
+    callTelemetryService.getTelemetryForCall(callId).stream()
+        .filter(e -> EVT_CALL_JOIN.equals(e.getEventType()) && e.getActorUserId() != null)
+        .forEach(e -> everJoined.add(e.getActorUserId()));
+
+    final Set<Long> pending = new LinkedHashSet<>();
+    callTelemetryService.getTelemetryForCall(callId).stream()
+        .filter(e -> EVT_CONFERENCE_INVITE.equals(e.getEventType()) && e.getTargetUserId() != null)
+        .forEach(
+            e -> {
+              if (!everJoined.contains(e.getTargetUserId())) {
+                pending.add(e.getTargetUserId());
+              }
+            });
+    return pending;
+  }
+
+  private Set<Long> resolveNotifyUserIds(final String callId, final Long excludeUserId) {
+    final Set<Long> notifyIds = new LinkedHashSet<>(resolveActiveParticipantIds(callId));
+    notifyIds.addAll(resolvePendingInviteeIds(callId));
+    if (excludeUserId != null) {
+      notifyIds.remove(excludeUserId);
+    }
+    return notifyIds;
+  }
+
   @PostMapping("/{callId}/end")
   @Operation(summary = "End a Chime meeting and notify all participants")
   /** Handles end-call request. */
@@ -402,7 +430,11 @@ public class CallController {
       }
 
       if (shouldEndMeeting) {
-        activeParticipantIds.stream()
+        final Set<Long> notifyIds = resolveNotifyUserIds(callId, currentUser.getId());
+        if (parsedOtherPartyId != null && !parsedOtherPartyId.equals(currentUser.getId())) {
+          notifyIds.add(parsedOtherPartyId);
+        }
+        notifyIds.stream()
             .map(String::valueOf)
             .forEach(
                 participantId ->
