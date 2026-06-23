@@ -287,10 +287,8 @@ public class CallController {
       throw new AppException(HttpStatus.FORBIDDEN, "User is not in this patient's care circle");
     }
 
-    // Add attendee to the existing Chime meeting (meeting already exists)
-    chimeService.createAttendee(callId, targetUserId.toString(), target.getRole().name(), getCallUserDisplayName(target));
-
-    // Notify target via WebSocket if online
+    // Notify only on invite; invitee gets createAttendee on POST /join
+    
     final Map<String, Object> invite = new HashMap<>();
     invite.put("type", "incoming-video-call");
     invite.put("senderId", currentUser.getId());

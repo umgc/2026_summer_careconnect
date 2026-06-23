@@ -48,6 +48,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -375,6 +376,43 @@ class CallControllerTest {
 
             verify(chimeService, never()).endMeeting(CALL_ID);
             verify(callNotificationHandler).sendNotificationToUser(eq("1"), any());
+            verify(callNotificationHandler).sendNotificationToUser(eq("4"), any());
+        }
+
+        @Test
+        @DisplayName("CHIME-012: POST /invite does not create Chime attendee but records CONFERENCE_INVITE")
+        @WithMockUser(username = "caregiver@test.com", roles = {"CAREGIVER"})
+        void chime012_inviteParticipant_notifyOnlyNoCreateAttendee() throws Exception {
+            mockCurrentCaregiver();
+
+            User familyUser = buildUser(4L, "family@test.com", Role.FAMILY_MEMBER);
+            familyUser.setName("Maria Family");
+            when(userRepository.findById(1L)).thenReturn(Optional.of(patientUser));
+            when(userRepository.findById(4L)).thenReturn(Optional.of(familyUser));
+            when(callTelemetryService.getTelemetryForCall(CALL_ID)).thenReturn(List.of(
+                    callEvent("CALL_JOIN", 1L, LocalDateTime.of(2026, 3, 23, 10, 0, 0)),
+                    callEvent("CALL_JOIN", 2L, LocalDateTime.of(2026, 3, 23, 10, 0, 5))
+            ));
+            when(familyMemberService.hasAccessToPatient(4L, 1L)).thenReturn(true);
+            when(callNotificationHandler.isUserOnline("4")).thenReturn(true);
+
+            mockMvc.perform(post(BASE_URL + "/" + CALL_ID + "/invite")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"targetUserId\":4}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("invited"))
+                    .andExpect(jsonPath("$.targetUserId").value(4));
+
+            verify(chimeService, never()).createAttendee(anyString(), anyString(), anyString(), anyString());
+            verify(callTelemetryService).recordCallEvent(
+                    eq(CALL_ID),
+                    eq("CONFERENCE_INVITE"),
+                    eq(2L),
+                    eq(4L),
+                    eq("SUCCESS"),
+                    any(),
+                    isNull());
             verify(callNotificationHandler).sendNotificationToUser(eq("4"), any());
         }
 
