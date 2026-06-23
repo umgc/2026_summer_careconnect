@@ -16,6 +16,7 @@ import com.careconnect.service.CaregiverPatientLinkService;
 import com.careconnect.service.ChimeService;
 import com.careconnect.service.FamilyMemberService;
 import com.careconnect.dto.FamilyMemberLinkResponse;
+import com.careconnect.notifications.SnsService;
 import com.careconnect.websocket.CallNotificationHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -88,6 +89,7 @@ class CallControllerTest {
     @MockitoBean private FamilyMemberService familyMemberService;
     @MockitoBean private UserRepository userRepository;
     @MockitoBean private CallNotificationHandler callNotificationHandler;
+    @MockitoBean private SnsService snsService;
 
     private ObjectMapper objectMapper;
     private User patientUser;
@@ -426,6 +428,73 @@ class CallControllerTest {
                     any(),
                     isNull());
             verify(callNotificationHandler).sendNotificationToUser(eq("4"), any());
+        }
+
+        @Test
+        @DisplayName("CHIME-016: POST /invite offline with phone sends SMS (L1a)")
+        @WithMockUser(username = "caregiver@test.com", roles = {"CAREGIVER"})
+        void inviteParticipant_offlineWithPhone_sendsSms() throws Exception {
+            mockCurrentCaregiver();
+
+            User familyUser = buildUser(4L, "family@test.com", Role.FAMILY_MEMBER);
+            familyUser.setName("Maria Family");
+            familyUser.setPhone("+15559876543");
+            when(userRepository.findById(1L)).thenReturn(Optional.of(patientUser));
+            when(userRepository.findById(4L)).thenReturn(Optional.of(familyUser));
+            when(callTelemetryService.getTelemetryForCall(CALL_ID)).thenReturn(List.of(
+                    callEvent("CALL_JOIN", 1L, LocalDateTime.of(2026, 3, 23, 10, 0, 0)),
+                    callEvent("CALL_JOIN", 2L, LocalDateTime.of(2026, 3, 23, 10, 0, 5))
+            ));
+            when(familyMemberService.hasAccessToPatient(4L, 1L)).thenReturn(true);
+            when(callNotificationHandler.isUserOnline("4")).thenReturn(false);
+            when(snsService.publishSms(eq("+15559876543"), anyString())).thenReturn("sms-msg-id");
+
+            mockMvc.perform(post(BASE_URL + "/" + CALL_ID + "/invite")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"targetUserId\":4}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("offline"))
+                    .andExpect(jsonPath("$.targetUserId").value(4));
+
+            verify(callNotificationHandler, never()).sendNotificationToUser(eq("4"), any());
+            verify(snsService).publishSms(
+                    eq("+15559876543"),
+                    argThat(msg -> msg.contains(CALL_ID) && msg.contains("Caregiver")));
+            verify(callTelemetryService).recordCallEvent(
+                    eq(CALL_ID),
+                    eq("CONFERENCE_INVITE"),
+                    eq(2L),
+                    eq(4L),
+                    eq("OFFLINE"),
+                    any(),
+                    isNull());
+        }
+
+        @Test
+        @DisplayName("CHIME-016b: POST /invite offline without phone skips SMS")
+        @WithMockUser(username = "caregiver@test.com", roles = {"CAREGIVER"})
+        void inviteParticipant_offlineWithoutPhone_skipsSms() throws Exception {
+            mockCurrentCaregiver();
+
+            User familyUser = buildUser(4L, "family@test.com", Role.FAMILY_MEMBER);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(patientUser));
+            when(userRepository.findById(4L)).thenReturn(Optional.of(familyUser));
+            when(callTelemetryService.getTelemetryForCall(CALL_ID)).thenReturn(List.of(
+                    callEvent("CALL_JOIN", 1L, LocalDateTime.of(2026, 3, 23, 10, 0, 0)),
+                    callEvent("CALL_JOIN", 2L, LocalDateTime.of(2026, 3, 23, 10, 0, 5))
+            ));
+            when(familyMemberService.hasAccessToPatient(4L, 1L)).thenReturn(true);
+            when(callNotificationHandler.isUserOnline("4")).thenReturn(false);
+
+            mockMvc.perform(post(BASE_URL + "/" + CALL_ID + "/invite")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"targetUserId\":4}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("offline"));
+
+            verify(snsService, never()).publishSms(anyString(), anyString());
         }
 
         @Test

@@ -14,6 +14,7 @@ import com.careconnect.service.CallTranscriptService;
 import com.careconnect.service.CaregiverPatientLinkService;
 import com.careconnect.service.ChimeService;
 import com.careconnect.service.FamilyMemberService;
+import com.careconnect.notifications.SnsService;
 import com.careconnect.websocket.CallNotificationHandler;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -89,6 +90,7 @@ public class CallController {
   @Autowired private CaregiverPatientLinkService caregiverPatientLinkService;
   @Autowired private FamilyMemberService familyMemberService;
   @Autowired private UserRepository userRepository;
+  @Autowired private SnsService snsService;
   @Autowired private Environment environment;
 
   private User getCurrentUser() {
@@ -304,11 +306,13 @@ public class CallController {
     final boolean online = callNotificationHandler.isUserOnline(targetUserId.toString());
     if (online) {
       callNotificationHandler.sendNotificationToUser(targetUserId.toString(), invite);
+    } else {
+      maybeSendOfflineConferenceInviteSms(currentUser, target, callId);
     }
 
     callTelemetryService.recordCallEvent(
         callId,
-        "CONFERENCE_INVITE",
+        EVT_CONFERENCE_INVITE,
         currentUser.getId(),
         targetUserId,
         online ? STATUS_SUCCESS : "OFFLINE",
@@ -345,6 +349,39 @@ public class CallController {
     }
     return user.getRole().name().charAt(0)
         + user.getRole().name().substring(1).toLowerCase(Locale.ROOT);
+  }
+
+  private void maybeSendOfflineConferenceInviteSms(
+      final User inviter, final User target, final String callId) {
+    final String phone = target.getPhone();
+    if (phone == null || phone.isBlank()) {
+      return;
+    }
+
+    final String inviterName = getCallUserDisplayName(inviter);
+    String message =
+        String.format(
+            "%s invited you to join a CareConnect video call. Open the app to join. Call ID: %s",
+            inviterName, callId);
+    if (message.length() > 160) {
+      message = message.substring(0, 157) + "...";
+    }
+
+    try {
+      snsService.publishSms(phone.trim(), message);
+      if (log.isInfoEnabled()) {
+        log.info(
+            "Sent offline conference invite SMS to user {} for call {}",
+            target.getId(),
+            callId);
+      }
+    } catch (Exception e) {
+      log.warn(
+          "Failed to send offline conference invite SMS to user {} for call {}: {}",
+          target.getId(),
+          callId,
+          e.getMessage());
+    }
   }
 
   private Set<Long> resolveActiveParticipantIds(final String callId) {
