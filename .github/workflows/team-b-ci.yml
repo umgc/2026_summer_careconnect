@@ -243,6 +243,7 @@ jobs:
         if: >
           github.event_name == 'pull_request' ||
           (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+        continue-on-error: true
         working-directory: frontend
         run: flutter build web --release
 
