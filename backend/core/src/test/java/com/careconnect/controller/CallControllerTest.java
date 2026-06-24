@@ -578,6 +578,34 @@ class CallControllerTest {
             verify(callNotificationHandler, never()).sendNotificationToUser(eq("2"), any());
         }
 
+        @Test
+        @DisplayName("CHIME-017: POST /end merges participantUserIds from body into notify set (L8a)")
+        @WithMockUser(username = "caregiver@test.com", roles = {"CAREGIVER"})
+        void endCall_mergesParticipantUserIdsFromBody() throws Exception {
+            mockCurrentCaregiver();
+
+            when(callTelemetryService.getTelemetryForCall(CALL_ID)).thenReturn(List.of(
+                    callEvent("CALL_JOIN", 1L, LocalDateTime.of(2026, 3, 23, 10, 0, 0)),
+                    callEvent("CALL_JOIN", 2L, LocalDateTime.of(2026, 3, 23, 10, 0, 5))
+            ));
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("otherPartyId", "1");
+            body.put("participantUserIds", List.of("4"));
+
+            mockMvc.perform(post(BASE_URL + "/" + CALL_ID + "/end")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(body)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("left"));
+
+            verify(callNotificationHandler).sendNotificationToUser(
+                    eq("1"), argThat(m -> "participant-left".equals(m.get("type"))));
+            verify(callNotificationHandler).sendNotificationToUser(
+                    eq("4"), argThat(m -> "participant-left".equals(m.get("type"))));
+        }
+
     }
 
     // 

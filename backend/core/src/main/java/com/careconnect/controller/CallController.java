@@ -435,6 +435,23 @@ public class CallController {
     return notifyIds;
   }
 
+  private void mergeParticipantUserIds(
+      final Set<Long> target, final Map<String, Object> body) {
+    if (body == null || body.isEmpty()) {
+      return;
+    }
+    final Object raw = body.get("participantUserIds");
+    if (!(raw instanceof List<?> ids)) {
+      return;
+    }
+    for (final Object id : ids) {
+      final Long parsed = parseUserId(id == null ? null : id.toString());
+      if (parsed != null) {
+        target.add(parsed);
+      }
+    }
+  }
+
   @PostMapping("/{callId}/end")
   @Operation(summary = "End a Chime meeting and notify all participants")
   /** Handles end-call request. */
@@ -450,6 +467,7 @@ public class CallController {
       }
 
       final Set<Long> activeParticipantIds = resolveActiveParticipantIds(callId);
+      mergeParticipantUserIds(activeParticipantIds, body);
       final Long parsedOtherPartyId = parseUserId(otherPartyId);
       if (parsedOtherPartyId != null && !parsedOtherPartyId.equals(currentUser.getId())) {
         activeParticipantIds.add(parsedOtherPartyId);
@@ -468,6 +486,7 @@ public class CallController {
 
       if (shouldEndMeeting) {
         final Set<Long> notifyIds = resolveNotifyUserIds(callId, currentUser.getId());
+        mergeParticipantUserIds(notifyIds, body);
         if (parsedOtherPartyId != null && !parsedOtherPartyId.equals(currentUser.getId())) {
           notifyIds.add(parsedOtherPartyId);
         }
