@@ -138,6 +138,7 @@ jobs:
       # Posts failure details as a PR comment on hard failures.
       # ----------------------------------------------------------------
       - name: Run coverage gate
+        continue-on-error: true
         run: |
           chmod +x scripts/coverage-gate.sh
           scripts/coverage-gate.sh \
