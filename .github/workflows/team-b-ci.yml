@@ -171,9 +171,14 @@ jobs:
         working-directory: frontend
         run: |
           echo "=== Integration tests containing // BLOCKED: ==="
-          find integration_test -name "*_test.dart" \
-            -exec grep -l "// BLOCKED:" {} \; \
-            | tee /tmp/blocked_tests.txt || true
+          if [ -d integration_test ]; then
+            find integration_test -name "*_test.dart" \
+              -exec grep -l "// BLOCKED:" {} \; \
+              | tee /tmp/blocked_tests.txt || true
+          else
+            echo "No integration_test/ directory — skipping."
+            touch /tmp/blocked_tests.txt
+          fi
           echo "blocked_count=$(wc -l < /tmp/blocked_tests.txt | tr -d ' ')" \
             >> "$GITHUB_OUTPUT"
           echo "=== Blocked test count: $(cat /tmp/blocked_tests.txt | wc -l) ==="
@@ -194,10 +199,20 @@ jobs:
           disable-animations: true
           script: |
             cd frontend
+            if [ ! -d integration_test ]; then
+              echo "No integration_test/ directory found — skipping E2E."
+              exit 0
+            fi
+
             BLOCKED_LIST=/tmp/blocked_tests.txt
             EXIT_CODE=0
 
             ALL_TESTS=$(find integration_test -name "*_test.dart" | sort)
+            if [ -z "$ALL_TESTS" ]; then
+              echo "No integration test files found — skipping E2E."
+              exit 0
+            fi
+
             for test_file in $ALL_TESTS; do
               if [ -f "$BLOCKED_LIST" ] && grep -q "$test_file" "$BLOCKED_LIST"; then
                 echo "SKIP (// BLOCKED:): $test_file"
