@@ -91,9 +91,9 @@ jobs:
           flutter analyze --no-pub 2>&1 | tail -5
           echo "Note: analyze is informational — Team D's SAST pipeline enforces analysis."
 
-      - name: Maven build (skip tests)
+      - name: Maven compile (skip tests)
         working-directory: backend/core
-        run: mvn -B clean package -DskipTests
+        run: mvn -B clean compile -DskipTests
 
       # ----------------------------------------------------------------
       # Stage 3: Unit tests
