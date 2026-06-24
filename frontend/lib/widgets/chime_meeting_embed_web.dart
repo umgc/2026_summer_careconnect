@@ -540,14 +540,21 @@ class _ChimeMeetingEmbedWebState extends State<_ChimeMeetingEmbedWeb> {
     <style>
       html, body { margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }
       #stage { position:relative; width:100%; height:100%; background:#000; }
-      #videoGrid {
+      #videoGridScroll {
         position:absolute; top:0; left:0; right:0; bottom:0;
-        display:grid; background:#000; gap:2px;
-        grid-template-columns:1fr; grid-template-rows:1fr;
+        overflow-y:auto; overflow-x:hidden; background:#000;
       }
-      #videoGrid.count-2 { grid-template-columns:1fr 1fr; grid-template-rows:1fr; }
-      #videoGrid.count-3 { grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
-      #videoGrid.count-4 { grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; }
+      #videoGrid {
+        display:grid; width:100%; min-height:100%; background:#000; gap:2px;
+        align-content:start;
+      }
+      #videoGrid.layout-single {
+        grid-template-columns:1fr; grid-template-rows:1fr; min-height:100%;
+      }
+      #videoGrid.layout-multi {
+        grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+        grid-auto-rows:minmax(160px, 1fr);
+      }
       .remote-video { width:100%; height:100%; object-fit:contain; background:#111; min-height:0; }
       #localVideo {
         position:absolute; right:16px; top:16px; width:22%; max-width:260px;
@@ -628,7 +635,9 @@ class _ChimeMeetingEmbedWebState extends State<_ChimeMeetingEmbedWeb> {
   </head>
   <body>
     <div id="stage">
-      <div id="videoGrid" class="count-0"></div>
+      <div id="videoGridScroll">
+        <div id="videoGrid"></div>
+      </div>
       <video id="localVideo" autoplay playsinline muted></video>
       <audio id="remoteAudio" autoplay></audio>
       <div id="status">Connecting media...</div>
@@ -2034,6 +2043,15 @@ class _ChimeMeetingEmbedWebState extends State<_ChimeMeetingEmbedWeb> {
           let activeVideoDeviceId = null;
           let localVideoHealthTimer = null;
 
+          function updateVideoGridLayout() {
+            const count = remoteTiles.size;
+            if (count <= 1) {
+              videoGrid.className = count === 0 ? '' : 'layout-single';
+              return;
+            }
+            videoGrid.className = 'layout-multi';
+          }
+
           function updateParticipantStatus() {
             if (remoteTiles.size > 0) {
               setStatus(remoteTiles.size === 1 ? 'Connected with participant' : 'Connected with ' + remoteTiles.size + ' participants');
@@ -2390,7 +2408,7 @@ class _ChimeMeetingEmbedWebState extends State<_ChimeMeetingEmbedWeb> {
                   el.className = 'remote-video';
                   videoGrid.appendChild(el);
                   remoteTiles.set(tileState.tileId, el);
-                  videoGrid.className = 'count-' + Math.min(remoteTiles.size, 4);
+                  updateVideoGridLayout();
                 }
                 bindAndPlayVideo(tileState.tileId, remoteTiles.get(tileState.tileId), 'remote');
                 updateParticipantStatus();
@@ -2407,7 +2425,7 @@ class _ChimeMeetingEmbedWebState extends State<_ChimeMeetingEmbedWeb> {
                 remoteEl.srcObject = null;
                 remoteEl.remove();
                 remoteTiles.delete(tileId);
-                videoGrid.className = 'count-' + Math.min(remoteTiles.size, 4);
+                updateVideoGridLayout();
                 remoteParticipantPresent = remoteTiles.size > 0;
                 updateParticipantStatus();
               }
