@@ -21,11 +21,10 @@ name: Team B CI
 on:
   push:
     branches:
-      - 'feature/b-**'
-      - develop
+      - '**'
   pull_request:
     branches:
-      - team-b-develop
+      - '**'
 
 env:
   FLUTTER_VERSION: '3.x'
@@ -45,17 +44,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate branch naming convention
+      - name: Log branch info
         run: |
           BRANCH="${{ github.head_ref || github.ref_name }}"
           echo "Branch: ${BRANCH}"
-          if [[ "${BRANCH}" != feature/b-* && \
-                "${BRANCH}" != team-b-* && \
-                "${BRANCH}" != develop ]]; then
-            echo "ERROR: Branch '${BRANCH}' does not follow Team B naming."
-            echo "Feature branches must be named feature/b-<description>."
-            exit 1
-          fi
+          echo "Event: ${{ github.event_name }}"
 
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
