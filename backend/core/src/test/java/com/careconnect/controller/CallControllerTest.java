@@ -39,7 +39,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -522,6 +521,8 @@ class CallControllerTest {
             verify(callNotificationHandler).sendNotificationToUser(
                     eq("4"), argThat(m -> "call-ended".equals(m.get("type"))));
             verify(callNotificationHandler, never()).sendNotificationToUser(eq("2"), any());
+            verify(callRecordingService).stopRecording(CALL_ID);
+            verify(chimeService).endMeeting(CALL_ID);
         }
 
         @Test
@@ -576,6 +577,8 @@ class CallControllerTest {
                     eq("4"), argThat(m -> "call-ended".equals(m.get("type"))));
             verify(callNotificationHandler, never()).sendNotificationToUser(eq("1"), any());
             verify(callNotificationHandler, never()).sendNotificationToUser(eq("2"), any());
+            verify(callRecordingService).stopRecording(CALL_ID);
+            verify(chimeService).endMeeting(CALL_ID);
         }
 
         @Test
