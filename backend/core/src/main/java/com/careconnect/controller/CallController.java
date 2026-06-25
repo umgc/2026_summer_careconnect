@@ -7,6 +7,7 @@ import com.careconnect.repository.UserRepository;
 import com.careconnect.security.Role;
 import com.careconnect.service.BedrockSentimentService;
 import com.careconnect.service.BedrockSentimentService.SentimentResult;
+import com.careconnect.service.CallAttendeeService;
 import com.careconnect.service.CallRecordingService;
 import com.careconnect.service.CallSummaryService;
 import com.careconnect.service.CallTelemetryService;
@@ -95,6 +96,8 @@ public class CallController {
   @Autowired
   private CallRecordingService callRecordingService;
   @Autowired
+  private CallAttendeeService callAttendeeService;
+  @Autowired
   private CaregiverPatientLinkService caregiverPatientLinkService;
   @Autowired
   private FamilyMemberService familyMemberService;
@@ -111,6 +114,19 @@ public class CallController {
     return userRepository
         .findByEmail(userEmail)
         .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "User not authenticated"));
+  }
+
+  private void recordCallAttendeeJoin(
+      final String callId, final Map<String, Object> joinResponse, final User currentUser) {
+    if (joinResponse == null) {
+      return;
+    }
+    final Object attendeeIdRaw = joinResponse.get("attendeeId");
+    if (attendeeIdRaw == null || attendeeIdRaw.toString().isBlank()) {
+      return;
+    }
+    callAttendeeService.recordJoin(
+        callId, attendeeIdRaw.toString(), currentUser.getId(), currentUser.getRole().name());
   }
 
   private void ensurePatientSource(final User currentUser) {
@@ -152,6 +168,7 @@ public class CallController {
       final boolean meetingAlreadyActive = chimeService.isMeetingActive(callId);
       final Map<String, Object> response = chimeService.joinMeeting(callId, currentUser.getId().toString(),
           currentUser.getRole().name(), getCallUserDisplayName(currentUser));
+      recordCallAttendeeJoin(callId, response, currentUser);
       final Map<String, Object> contextMetadata = extractCallContextMetadata(body);
       callTelemetryService.recordCallEvent(
           callId,
@@ -485,6 +502,7 @@ public class CallController {
       activeParticipantIds.remove(currentUser.getId());
       final boolean shouldEndMeeting = activeParticipantIds.size() <= 1;
       final Map<String, Object> contextMetadata = extractCallContextMetadata(body);
+      callAttendeeService.recordLeave(callId, currentUser.getId());
 
       if (shouldEndMeeting) {
         maybeRecordFinalOverallSentiment(callId, currentUser.getId(), parseUserId(otherPartyId));
