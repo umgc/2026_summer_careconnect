@@ -192,6 +192,13 @@ public class CallController {
             log.warn("Auto-recording start failed for call {}: {}", callId, e.getMessage());
           }
         }
+        try {
+          callRecordingService.startKvsPipeline(callId);
+        } catch (Exception e) {
+          if (log.isWarnEnabled()) {
+            log.warn("KVS pipeline start failed for call {}: {}", callId, e.getMessage());
+          }
+        }
       }
       return ResponseEntity.ok(response);
     } catch (AppException e) {
