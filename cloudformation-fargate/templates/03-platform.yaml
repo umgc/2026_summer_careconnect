@@ -87,7 +87,7 @@ Resources:
                 Resource:
                   - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:/careconnect/${Environment}/*
 
-  # Task role: application IAM surface. Empty now, ready for future permissions.
+  # Task role: application IAM surface (KVS speaker capture, Media Insights, recording).
   EcsTaskRole:
     Type: AWS::IAM::Role
     Properties:
@@ -100,6 +100,108 @@ Resources:
               Service:
                 - ecs-tasks.amazonaws.com
             Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub careconnect-${Environment}-kvs-media-insights
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: KinesisVideoStreams
+                Effect: Allow
+                Action:
+                  - kinesisvideo:CreateStream
+                  - kinesisvideo:DescribeStream
+                  - kinesisvideo:GetDataEndpoint
+                  - kinesisvideo:GetMedia
+                  - kinesisvideo:PutMedia
+                  - kinesisvideo:TagStream
+                  - kinesisvideo:ListStreams
+                Resource: !Sub arn:aws:kinesisvideo:${AWS::Region}:${AWS::AccountId}:stream/*
+              - Sid: ChimeMediaInsights
+                Effect: Allow
+                Action:
+                  - chime:CreateMediaInsightsPipeline
+                  - chime:DeleteMediaInsightsPipeline
+                  - chime:GetMediaInsightsPipeline
+                  - chime:CreateMediaInsightsPipelineConfiguration
+                  - chime:GetMediaInsightsPipelineConfiguration
+                  - chime:ListMediaInsightsPipelineConfigurations
+                Resource: '*'
+              - Sid: KvsStreamArnsParameter
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource: !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/careconnect/${Environment}/kvs-stream-arns
+
+  # Pre-provisioned KVS streams for per-attendee speaker capture (pool checkout in app).
+  KvsSpeakerStream01:
+    Type: AWS::KinesisVideo::Stream
+    Properties:
+      Name: !Sub careconnect-${Environment}-kvs-01
+      DataRetentionInHours: 24
+  KvsSpeakerStream02:
+    Type: AWS::KinesisVideo::Stream
+    Properties:
+      Name: !Sub careconnect-${Environment}-kvs-02
+      DataRetentionInHours: 24
+  KvsSpeakerStream03:
+    Type: AWS::KinesisVideo::Stream
+    Properties:
+      Name: !Sub careconnect-${Environment}-kvs-03
+      DataRetentionInHours: 24
+  KvsSpeakerStream04:
+    Type: AWS::KinesisVideo::Stream
+    Properties:
+      Name: !Sub careconnect-${Environment}-kvs-04
+      DataRetentionInHours: 24
+  KvsSpeakerStream05:
+    Type: AWS::KinesisVideo::Stream
+    Properties:
+      Name: !Sub careconnect-${Environment}-kvs-05
+      DataRetentionInHours: 24
+  KvsSpeakerStream06:
+    Type: AWS::KinesisVideo::Stream
+    Properties:
+      Name: !Sub careconnect-${Environment}-kvs-06
+      DataRetentionInHours: 24
+  KvsSpeakerStream07:
+    Type: AWS::KinesisVideo::Stream
+    Properties:
+      Name: !Sub careconnect-${Environment}-kvs-07
+      DataRetentionInHours: 24
+  KvsSpeakerStream08:
+    Type: AWS::KinesisVideo::Stream
+    Properties:
+      Name: !Sub careconnect-${Environment}-kvs-08
+      DataRetentionInHours: 24
+  KvsSpeakerStream09:
+    Type: AWS::KinesisVideo::Stream
+    Properties:
+      Name: !Sub careconnect-${Environment}-kvs-09
+      DataRetentionInHours: 24
+  KvsSpeakerStream10:
+    Type: AWS::KinesisVideo::Stream
+    Properties:
+      Name: !Sub careconnect-${Environment}-kvs-10
+      DataRetentionInHours: 24
+
+  KvsStreamArnsParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /careconnect/${Environment}/kvs-stream-arns
+      Type: String
+      Description: Comma-separated KVS stream ARNs for speaker-ID pool checkout
+      Value: !Join
+        - ','
+        - - !GetAtt KvsSpeakerStream01.Arn
+          - !GetAtt KvsSpeakerStream02.Arn
+          - !GetAtt KvsSpeakerStream03.Arn
+          - !GetAtt KvsSpeakerStream04.Arn
+          - !GetAtt KvsSpeakerStream05.Arn
+          - !GetAtt KvsSpeakerStream06.Arn
+          - !GetAtt KvsSpeakerStream07.Arn
+          - !GetAtt KvsSpeakerStream08.Arn
+          - !GetAtt KvsSpeakerStream09.Arn
+          - !GetAtt KvsSpeakerStream10.Arn
 
 Outputs:
   # Exported outputs are consumed by the service stack.
@@ -137,3 +239,13 @@ Outputs:
     Value: !Ref BackendLogGroup
     Export:
       Name: !Sub careconnect-${Environment}-BackendLogGroupName
+
+  KvsStreamArnsParameterName:
+    Value: !Ref KvsStreamArnsParameter
+    Export:
+      Name: !Sub careconnect-${Environment}-KvsStreamArnsParameterName
+
+  KvsStreamPoolSize:
+    Value: '10'
+    Export:
+      Name: !Sub careconnect-${Environment}-KvsStreamPoolSize

@@ -239,7 +239,9 @@ The full setup guide is in
 - ECR repository
 - ECS cluster
 - ECS task execution role
-- ECS task role
+- ECS task role (KVS + Chime Media Insights IAM for speaker-ID capture)
+- 10 pre-provisioned Kinesis Video Streams (speaker pool)
+- SSM parameter `/careconnect/{env}/kvs-stream-arns` (comma-separated stream ARNs)
 - CloudWatch log group for the backend container
 
 4. `04-service.yaml`
@@ -276,6 +278,16 @@ The templates assume the backend uses these environment variables:
 The ALB health check path is:
 
 - `/v1/api/test/health`
+
+### KVS speaker stream pool (speaker identification)
+
+After deploying `03-platform.yaml`, the stack provides:
+
+- **10** pre-provisioned Kinesis Video Streams (`careconnect-{env}-kvs-01` … `10`)
+- SSM parameter `/careconnect/{env}/kvs-stream-arns` (comma-separated ARNs)
+- `EcsTaskRole` permissions for `kinesisvideo:*` (scoped to streams) and Chime Media Insights APIs
+
+For ECS, set `CARECONNECT_KVS_ENABLED=true` and load `CARECONNECT_KVS_STREAM_ARNS` from the SSM parameter (wired in service stack when speaker capture ships). Local dev uses IAM user credentials from `.env`, not the ECS task role.
 
 ### Parameter files
 
