@@ -1,8 +1,10 @@
 package com.careconnect.controller;
 
+import com.careconnect.dto.CheckInCreateResponseDTO;
 import com.careconnect.dto.QuestionDTO;
 import com.careconnect.model.User;
 import com.careconnect.security.Role;
+import com.careconnect.service.CheckInSnapshotService;
 import com.careconnect.service.QuestionService;
 import com.careconnect.util.SecurityUtil;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,23 +16,19 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * RBAC tests for CheckInQuestionController.
- *
- * Tests that GET /api/checkins/{id}/questions and /v1/api/checkins/{id}/questions
- * enforce defense-in-depth via securityUtil.resolveCurrentUser().
- * All authenticated roles (ADMIN, CAREGIVER, PATIENT, FAMILY_MEMBER) should be
- * able to read check-in questions since patients need them during check-ins.
- * The resolveCurrentUser() call verifies the user exists in the database.
- *
- * Uses @WebMvcTest to match the existing RBAC test conventions in this project.
- */
 @WebMvcTest(CheckInQuestionController.class)
 @DisplayName("CheckInQuestionController RBAC Tests")
 class CheckInQuestionControllerRbacTest {
@@ -40,6 +38,9 @@ class CheckInQuestionControllerRbacTest {
 
     @MockitoBean
     private QuestionService questionService;
+
+    @MockitoBean
+    private CheckInSnapshotService checkInSnapshotService;
 
     @MockitoBean
     private SecurityUtil securityUtil;
@@ -65,14 +66,12 @@ class CheckInQuestionControllerRbacTest {
         return u;
     }
 
-    // ── GET /api/checkins/{id}/questions - resolveCurrentUser defense-in-depth ──
-
     @Test
     @WithMockUser(username = "admin@test.com")
-    @DisplayName("ADMIN can read check-in questions")
-    void admin_canReadQuestions() throws Exception {
+    @DisplayName("ADMIN can read check-in snapshot questions")
+    void admin_canReadSnapshotQuestions() throws Exception {
         when(securityUtil.resolveCurrentUser()).thenReturn(adminUser);
-        when(questionService.findActiveOrdered()).thenReturn(List.of(
+        when(checkInSnapshotService.getSnapshotQuestions(1L)).thenReturn(List.of(
                 new QuestionDTO(1L, "How are you?", "TEXT", true, true, 1)));
 
         mockMvc.perform(get("/api/checkins/1/questions"))
@@ -81,29 +80,30 @@ class CheckInQuestionControllerRbacTest {
                 .andExpect(jsonPath("$[0].prompt").value("How are you?"));
 
         verify(securityUtil).resolveCurrentUser();
+        verify(checkInSnapshotService).getSnapshotQuestions(1L);
     }
 
     @Test
     @WithMockUser(username = "caregiver@test.com")
-    @DisplayName("CAREGIVER can read check-in questions")
-    void caregiver_canReadQuestions() throws Exception {
+    @DisplayName("CAREGIVER can read snapshot questions")
+    void caregiver_canReadSnapshotQuestions() throws Exception {
         when(securityUtil.resolveCurrentUser()).thenReturn(caregiverUser);
-        when(questionService.findActiveOrdered()).thenReturn(List.of(
-                new QuestionDTO(1L, "How are you?", "TEXT", true, true, 1)));
+        when(checkInSnapshotService.getSnapshotQuestions(1L)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/checkins/1/questions"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
 
         verify(securityUtil).resolveCurrentUser();
+        verify(checkInSnapshotService).getSnapshotQuestions(1L);
     }
 
     @Test
     @WithMockUser(username = "patient@test.com")
-    @DisplayName("PATIENT can read check-in questions (needed for check-in flow)")
-    void patient_canReadQuestions() throws Exception {
+    @DisplayName("PATIENT can read snapshot questions")
+    void patient_canReadSnapshotQuestions() throws Exception {
         when(securityUtil.resolveCurrentUser()).thenReturn(patientUser);
-        when(questionService.findActiveOrdered()).thenReturn(List.of(
-                new QuestionDTO(1L, "How are you?", "TEXT", true, true, 1)));
+        when(checkInSnapshotService.getSnapshotQuestions(1L)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/checkins/1/questions"))
                 .andExpect(status().isOk());
@@ -113,11 +113,10 @@ class CheckInQuestionControllerRbacTest {
 
     @Test
     @WithMockUser(username = "family@test.com")
-    @DisplayName("FAMILY_MEMBER can read check-in questions")
-    void familyMember_canReadQuestions() throws Exception {
+    @DisplayName("FAMILY_MEMBER can read snapshot questions")
+    void familyMember_canReadSnapshotQuestions() throws Exception {
         when(securityUtil.resolveCurrentUser()).thenReturn(familyMemberUser);
-        when(questionService.findActiveOrdered()).thenReturn(List.of(
-                new QuestionDTO(1L, "How are you?", "TEXT", true, true, 1)));
+        when(checkInSnapshotService.getSnapshotQuestions(1L)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/checkins/1/questions"))
                 .andExpect(status().isOk());
@@ -125,41 +124,44 @@ class CheckInQuestionControllerRbacTest {
         verify(securityUtil).resolveCurrentUser();
     }
 
-    // ── Versioned path /v1/api/checkins/{id}/questions ──────────────────────────
+    @Test
+    @WithMockUser(username = "admin@test.com")
+    @DisplayName("Versioned path returns legacy global active questions")
+    void versionedPath_usesLegacyQuestionService() throws Exception {
+        when(securityUtil.resolveCurrentUser()).thenReturn(adminUser);
+        when(questionService.findActiveOrdered()).thenReturn(List.of(
+                new QuestionDTO(1L, "Legacy", "TEXT", true, true, 1)));
+
+        mockMvc.perform(get("/v1/api/checkins/1/questions"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].prompt").value("Legacy"));
+
+        verify(questionService).findActiveOrdered();
+    }
 
     @Test
     @WithMockUser(username = "admin@test.com")
-    @DisplayName("ADMIN can read questions via versioned path")
-    void admin_canReadQuestions_versionedPath() throws Exception {
+    @DisplayName("ADMIN can create check-ins with snapshots")
+    void admin_canCreateCheckInWithSnapshots() throws Exception {
         when(securityUtil.resolveCurrentUser()).thenReturn(adminUser);
-        when(questionService.findActiveOrdered()).thenReturn(List.of(
-                new QuestionDTO(1L, "How are you?", "TEXT", true, true, 1)));
+        when(checkInSnapshotService.createCheckInWithSnapshot(any())).thenReturn(
+                new CheckInCreateResponseDTO(10L, 3L, OffsetDateTime.parse("2026-06-26T10:00:00Z"), 2)
+        );
 
-        mockMvc.perform(get("/v1/api/checkins/99/questions"))
-                .andExpect(status().isOk());
-
-        verify(securityUtil).resolveCurrentUser();
-    }
-
-    @Test
-    @WithMockUser(username = "patient@test.com")
-    @DisplayName("PATIENT can read questions via versioned path")
-    void patient_canReadQuestions_versionedPath() throws Exception {
-        when(securityUtil.resolveCurrentUser()).thenReturn(patientUser);
-        when(questionService.findActiveOrdered()).thenReturn(List.of());
-
-        mockMvc.perform(get("/v1/api/checkins/5/questions"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
+        mockMvc.perform(post("/api/checkins")
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("{\"patientId\":3,\"selectedQuestionIds\":[1,2]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.checkInId").value(10));
 
         verify(securityUtil).resolveCurrentUser();
+        verify(checkInSnapshotService).createCheckInWithSnapshot(any());
     }
-
-    // ── Defense-in-depth: resolveCurrentUser fails for unknown user ─────────────
 
     @Test
     @WithMockUser(username = "unknown@test.com")
-    @DisplayName("Unknown user in DB triggers RuntimeException from resolveCurrentUser")
+    @DisplayName("Unknown user in DB fails before service access")
     void unknownUser_triggersRuntimeException() throws Exception {
         when(securityUtil.resolveCurrentUser())
                 .thenThrow(new RuntimeException("User not found: unknown@test.com"));
@@ -168,6 +170,6 @@ class CheckInQuestionControllerRbacTest {
                 .andExpect(status().isInternalServerError());
 
         verify(securityUtil).resolveCurrentUser();
-        verifyNoInteractions(questionService);
+        verifyNoInteractions(questionService, checkInSnapshotService);
     }
 }
