@@ -1,8 +1,6 @@
 {
   "@@locale": "en",
 
-  "testFallBackVariable": "I should only be in English",
-
   "menuTitle": "Menu",
   "yourShortcuts": "Your shortcuts",
   "preferences": "Preferences",
