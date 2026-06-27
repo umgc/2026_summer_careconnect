@@ -10,6 +10,6 @@ public record CheckInCreateRequestDTO(
         Long patientId,
 
         @NotEmpty(message = "selectedQuestionIds must not be empty")
-        List<Long> selectedQuestionIds
+        List<@NotNull(message = "selectedQuestionIds must not contain null values") Long> selectedQuestionIds
 ) {
 }

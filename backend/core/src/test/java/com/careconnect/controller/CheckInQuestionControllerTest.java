@@ -24,6 +24,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -60,7 +61,7 @@ class CheckInQuestionControllerTest {
         User user = new User();
         user.setId(100L);
         user.setRole(Role.CAREGIVER);
-        when(securityUtil.resolveCurrentUser()).thenReturn(user);
+        lenient().when(securityUtil.resolveCurrentUser()).thenReturn(user);
     }
 
     @Test
@@ -99,6 +100,23 @@ class CheckInQuestionControllerTest {
     }
 
     @Test
+    void getQuestions_versionedPath_withContextPath_stillUsesLegacyBehavior() throws Exception {
+        when(questionService.findActiveOrdered())
+                .thenReturn(List.of(
+                        new QuestionDTO(10L, "Legacy active", "TEXT", true, true, 1)
+                ));
+
+        mockMvc.perform(get("/careconnect/v1/api/checkins/{checkInId}/questions", 99L)
+                        .contextPath("/careconnect"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].prompt").value("Legacy active"));
+
+        verify(questionService).findActiveOrdered();
+        verify(checkInSnapshotService, never()).getSnapshotQuestions(any());
+    }
+
+    @Test
     void createCheckIn_persistsSnapshotAndReturnsCreated() throws Exception {
         CheckInCreateRequestDTO request = new CheckInCreateRequestDTO(7L, List.of(1L, 2L, 3L));
         OffsetDateTime createdAt = OffsetDateTime.parse("2026-06-26T10:15:30Z");
@@ -114,5 +132,15 @@ class CheckInQuestionControllerTest {
                 .andExpect(jsonPath("$.questionCount").value(3));
 
         verify(checkInSnapshotService).createCheckInWithSnapshot(eq(request));
+    }
+
+    @Test
+    void createCheckIn_withNullQuestionId_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/checkins")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"patientId\":7,\"selectedQuestionIds\":[1,null,3]}"))
+                .andExpect(status().isBadRequest());
+
+        verify(checkInSnapshotService, never()).createCheckInWithSnapshot(any());
     }
 }

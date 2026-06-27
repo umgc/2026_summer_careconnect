@@ -50,6 +50,10 @@ public class CheckInQuestionController {
         securityUtil.resolveCurrentUser();
 
         String uri = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        if (contextPath != null && !contextPath.isEmpty() && uri.startsWith(contextPath)) {
+            uri = uri.substring(contextPath.length());
+        }
         if (uri.startsWith("/v1/api/")) {
             // Backward compatibility for legacy clients.
             return ResponseEntity.ok(questionService.findActiveOrdered());
