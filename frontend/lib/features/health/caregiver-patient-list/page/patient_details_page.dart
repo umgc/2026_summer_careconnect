@@ -1130,6 +1130,16 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     }).toList();
   }
 
+  int? _latestVirtualCheckInId() {
+    final ordered = [..._virtualCheckIns]
+      ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    for (final entry in ordered) {
+      final parsed = int.tryParse(entry.id);
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
   void _applyCallHistoryData({
     required int patientUserId,
     required List<Map<String, dynamic>> telemetryData,
@@ -2478,9 +2488,18 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                                       // Seed with your current config if you have it:
                                       final initialQuestions =
                                           <VirtualCheckInQuestion>[];
-                                      // TODO: replace with your real ID source:
-                                      final checkInId =
-                                          1; // TODO: replace with real patient id
+                                      final checkInId = _latestVirtualCheckInId();
+                                      if (checkInId == null) {
+                                        if (!context.mounted) return;
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              'No existing check-in found for this patient yet.',
+                                            ),
+                                          ),
+                                        );
+                                        return;
+                                      }
 
                                       final updated =
                                           await showModalBottomSheet<
