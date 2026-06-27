@@ -10,6 +10,8 @@ import com.careconnect.security.AuthorizationService;
 import com.careconnect.security.UnauthorizedException;
 import com.careconnect.service.QuestionService;
 import com.careconnect.util.SecurityUtil;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -63,11 +65,12 @@ public class QuestionController {
     @RequirePermission(Permission.CREATE_TASKS)
 
     @PostMapping
-    public ResponseEntity<QuestionDTO> create(@RequestBody QuestionUpsertDTO body) throws UnauthorizedException {
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseEntity<QuestionDTO> create(@Valid @RequestBody QuestionUpsertDTO body) throws UnauthorizedException {
         User currentUser = securityUtil.resolveCurrentUser();
         authorizationService.requireAdmin(currentUser);
         QuestionDTO created = questions.create(body);
-        return ResponseEntity.ok(created);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     /** PUT /api/questions/{id} */
@@ -75,7 +78,7 @@ public class QuestionController {
 
     @PutMapping("/{id}")
     public ResponseEntity<QuestionDTO> update(@PathVariable Long id,
-                                              @RequestBody QuestionUpsertDTO body) throws UnauthorizedException {
+                                              @Valid @RequestBody QuestionUpsertDTO body) throws UnauthorizedException {
         User currentUser = securityUtil.resolveCurrentUser();
         authorizationService.requireAdmin(currentUser);
         return questions.update(id, body)

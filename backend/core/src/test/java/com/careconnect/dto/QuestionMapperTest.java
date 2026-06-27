@@ -83,14 +83,14 @@ class QuestionMapperTest {
     }
 
     @Test
-    void applyUpsert_optionalFields_appliedCorrectly() throws Exception {
+    void applyUpsert_nullOrdinal_defaultsToZero() throws Exception {
         final QuestionUpsertDTO src = new QuestionUpsertDTO(
-                "True or false?", QuestionType.TRUE_FALSE, false, 0);
+                "Null ordinal Q?", QuestionType.TEXT, false, null);
 
         QuestionMapper.applyUpsert(mockQuestion, src);
 
-        verify(mockQuestion).setPrompt("True or false?");
-        verify(mockQuestion).setType(QuestionType.TRUE_FALSE);
+        verify(mockQuestion).setPrompt("Null ordinal Q?");
+        verify(mockQuestion).setType(QuestionType.TEXT);
         verify(mockQuestion).setRequired(false);
         verify(mockQuestion).setOrdinal(0);
     }
