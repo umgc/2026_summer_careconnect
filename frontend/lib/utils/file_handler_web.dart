@@ -47,6 +47,6 @@ class WebFileHandler implements FileHandler {
 }
 
 // Platform-specific implementation for web platform
-FileHandler _createPlatformHandler() {
+FileHandler createFileHandler() {
   return WebFileHandler();
 }

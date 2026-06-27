@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../../../services/evv_service.dart';
 import '../../../../widgets/app_bar_helper.dart';
 import '../../../../widgets/common_drawer.dart';
-import '../../../../utils/file_handler_web.dart';
+import '../../../../utils/file_handler.dart';
 
 /// Allows a caregiver to review their APPROVED EVV visit records and
 /// manually trigger submission to HHAExchange
@@ -145,8 +145,8 @@ class _EvvHhaExchangeSubmitPageState extends State<EvvHhaExchangeSubmitPage> {
       // Convert JSON string to bytes
       final bytes = utf8.encode(pretty) as Uint8List;
 
-      // Use the proper web file handler
-      final fileHandler = WebFileHandler();
+      // Use the platform-appropriate file handler (web download vs. native save)
+      final fileHandler = createFileHandler();
       await fileHandler.downloadFile(filename, bytes, 'application/json');
 
       debugPrint('[HHAExchange] Payload download completed successfully');
