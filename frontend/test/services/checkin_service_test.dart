@@ -207,6 +207,69 @@ void main() {
     });
   });
 
+  // ─── createCheckinWithSelectedQuestions ────────────────────────────────────
+
+  group('CheckinService.createCheckinWithSelectedQuestions()', () {
+    Future<int?> _runCreateWithClient(
+      Future<http.Response> Function(http.Request req) handler, {
+      String patientId = '101',
+      List<int> selectedQuestionIds = const [1, 2],
+    }) {
+      return http.runWithClient(
+        () => CheckinService.createCheckinWithSelectedQuestions(
+          patientId: patientId,
+          selectedQuestionIds: selectedQuestionIds,
+        ),
+        () => MockClient(handler),
+      );
+    }
+
+    test('returns created checkInId from response body', () async {
+      final result = await _runCreateWithClient((req) async {
+        expect(req.method, 'POST');
+        expect(req.url.path, contains('/api/checkins'));
+        return http.Response(jsonEncode({'checkInId': 987}), 201);
+      });
+
+      expect(result, 987);
+    });
+
+    test('parses fallback id fields in response body', () async {
+      final result = await _runCreateWithClient((_) async {
+        return http.Response(jsonEncode({'id': '654'}), 200);
+      });
+
+      expect(result, 654);
+    });
+
+    test('returns null on non-success response status', () async {
+      final result = await _runCreateWithClient((_) async {
+        return http.Response('Bad Request', 400);
+      });
+
+      expect(result, isNull);
+    });
+
+    test('returns null when response body is empty', () async {
+      final result = await _runCreateWithClient((_) async {
+        return http.Response('', 201);
+      });
+
+      expect(result, isNull);
+    });
+
+    test('does not call backend for invalid input', () async {
+      var requestCount = 0;
+      final result = await _runCreateWithClient((_) async {
+        requestCount++;
+        return http.Response('', 500);
+      }, patientId: 'not-an-int', selectedQuestionIds: const []);
+
+      expect(result, isNull);
+      expect(requestCount, 0);
+    });
+  });
+
   // ─── getCheckinCount ──────────────────────────────────────────────────────
 
   group('CheckinService.getCheckinCount()', () {

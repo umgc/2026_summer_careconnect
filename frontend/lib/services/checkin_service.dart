@@ -71,6 +71,38 @@ class CheckinService {
     return response.statusCode == 201 || response.statusCode == 200;
   }
 
+  /// Creates a check-in using explicit question IDs and returns the new check-in ID.
+  /// Returns null if the request fails or the response does not include an ID.
+  static Future<int?> createCheckinWithSelectedQuestions({
+    required String patientId,
+    required List<int> selectedQuestionIds,
+  }) async {
+    final parsedPatientId = _parseIntId(patientId);
+    if (parsedPatientId == null || selectedQuestionIds.isEmpty) return null;
+
+    final url = Uri.parse(_baseUrl);
+    final body = jsonEncode({
+      'patientId': parsedPatientId,
+      'selectedQuestionIds': selectedQuestionIds,
+    });
+
+    final headers = await AuthTokenManager.getAuthHeaders();
+    final response = await http.post(url, headers: headers, body: body);
+    if (response.statusCode != 201 && response.statusCode != 200) return null;
+
+    final rawBody = response.body.trim();
+    if (rawBody.isEmpty) return null;
+
+    final decoded = jsonDecode(rawBody);
+    if (decoded is! Map<String, dynamic>) return null;
+
+    final rawId = decoded['checkInId'] ?? decoded['checkinId'] ?? decoded['id'];
+    if (rawId is int) return rawId;
+    if (rawId is num) return rawId.toInt();
+    if (rawId is String) return int.tryParse(rawId);
+    return null;
+  }
+
   /// Fetches the total number of check-ins tied to a caregiver.
   /// Example use: final count = await CheckinService.getCheckinCount(caregiverId);
   static Future<int> getCheckinCount(String caregiverId) async {

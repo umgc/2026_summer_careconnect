@@ -35,6 +35,7 @@ import '../widgets/recent_symptom_card.dart' as sympt;
 
 // API and models
 import '../../../../services/api_service.dart';
+import '../../../../services/checkin_service.dart';
 import '../../../health/medication-tracker/models/medication-model.dart';
 import '../../../../providers/user_provider.dart';
 import 'package:care_connect_app/features/activities/presentation/pages/adl_iadl_management_screen.dart';
@@ -1138,6 +1139,50 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       if (parsed != null) return parsed;
     }
     return null;
+  }
+
+  List<int>? _extractCatalogQuestionIds(List<VirtualCheckInQuestion> questions) {
+    final ids = <int>{};
+    for (final question in questions) {
+      final parsed = int.tryParse(question.id.trim());
+      if (parsed == null) return null;
+      ids.add(parsed);
+    }
+    return ids.toList();
+  }
+
+  void _showConfigureFeedback(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<bool> _saveVirtualCheckInConfiguration(
+    List<VirtualCheckInQuestion> updated,
+  ) async {
+    final selectedQuestionIds = _extractCatalogQuestionIds(updated);
+    if (selectedQuestionIds == null) {
+      _showConfigureFeedback(
+        'Custom questions are not supported yet. Please add questions from the catalog.',
+      );
+      return false;
+    }
+    if (selectedQuestionIds.isEmpty) {
+      _showConfigureFeedback('Select at least one question to save.');
+      return false;
+    }
+
+    final createdCheckInId = await CheckinService.createCheckinWithSelectedQuestions(
+      patientId: widget.patientId,
+      selectedQuestionIds: selectedQuestionIds,
+    );
+    if (createdCheckInId == null) {
+      _showConfigureFeedback('Failed to save virtual check-in configuration.');
+      return false;
+    }
+
+    await _loadPatientData();
+    _showConfigureFeedback('Virtual check-in configuration saved');
+    return true;
   }
 
   void _applyCallHistoryData({
@@ -2489,17 +2534,6 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                                       final initialQuestions =
                                           <VirtualCheckInQuestion>[];
                                       final checkInId = _latestVirtualCheckInId();
-                                      if (checkInId == null) {
-                                        if (!context.mounted) return;
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'No existing check-in found for this patient yet.',
-                                            ),
-                                          ),
-                                        );
-                                        return;
-                                      }
 
                                       final updated =
                                           await showModalBottomSheet<
@@ -2516,23 +2550,15 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                                             ),
                                             builder: (_) =>
                                                 VirtualCheckInConfigSheet(
-                                                  checkInId:
-                                                      checkInId, // ✅ required
+                                                  checkInId: checkInId,
                                                   initial: initialQuestions,
                                                 ),
                                           );
 
                                       if (!context.mounted) return;
                                       if (updated != null) {
-                                        // TODO: persist `updated` to backend and refresh UI
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Virtual check-in configuration saved',
-                                            ),
-                                          ),
+                                        await _saveVirtualCheckInConfiguration(
+                                          updated,
                                         );
                                       }
                                     }
