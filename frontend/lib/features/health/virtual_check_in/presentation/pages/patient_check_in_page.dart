@@ -54,18 +54,30 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
   Future<void> _loadAssignedQuestionnaire() async {
     try {
       final user = Provider.of<UserProvider>(context, listen: false).user;
-      final patientId = user?.patientId;
-      if (patientId == null) {
+      if (user == null) {
         setState(() {
-          _questionnaireError = 'No patient account is linked to this login.';
+          _questionnaireError = 'No user session found. Please sign in again.';
           _isLoadingQuestionnaire = false;
         });
         return;
       }
 
-      final checkIns = await CheckinService.fetchCheckInsForPatient(
-        patientId.toString(),
-      );
+      final candidateIds = <int>{
+        if (user.patientId != null) user.patientId!,
+        user.id,
+      };
+
+      List<CheckInSummary> checkIns = const [];
+      for (final id in candidateIds) {
+        final found = await CheckinService.fetchCheckInsForPatient(
+          id.toString(),
+        );
+        if (found.isNotEmpty) {
+          checkIns = found;
+          break;
+        }
+      }
+
       if (checkIns.isEmpty) {
         setState(() {
           _questionnaireError =
