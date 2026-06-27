@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/env_constant.dart';
+import 'auth_token_manager.dart';
 
 /// Service that handles creating and retrieving patient check-ins.
 /// Used by both patient and caregiver dashboards.
@@ -30,13 +31,13 @@ class CheckinService {
   }
 
   static Future<List<int>> _fetchActiveQuestionIds() async {
+    final headers = await AuthTokenManager.getAuthHeaders();
+    headers['Accept'] = 'application/json';
+
     final url = Uri.parse(_questionsUrl).replace(
       queryParameters: const {'active': 'true'},
     );
-    final response = await http.get(
-      url,
-      headers: const {'Accept': 'application/json'},
-    );
+    final response = await http.get(url, headers: headers);
     if (response.statusCode != 200) return const [];
 
     final decoded = jsonDecode(response.body);
@@ -60,9 +61,10 @@ class CheckinService {
       'selectedQuestionIds': selectedQuestionIds,
     });
 
+    final headers = await AuthTokenManager.getAuthHeaders();
     final response = await http.post(
       url,
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: body,
     );
 
@@ -73,7 +75,9 @@ class CheckinService {
   /// Example use: final count = await CheckinService.getCheckinCount(caregiverId);
   static Future<int> getCheckinCount(String caregiverId) async {
     final url = Uri.parse('$_baseUrl/count?caregiverId=$caregiverId');
-    final response = await http.get(url);
+    final headers = await AuthTokenManager.getAuthHeaders();
+    headers['Accept'] = 'application/json';
+    final response = await http.get(url, headers: headers);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
