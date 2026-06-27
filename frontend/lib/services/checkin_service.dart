@@ -6,16 +6,58 @@ import '../config/env_constant.dart';
 /// Used by both patient and caregiver dashboards.
 class CheckinService {
   static String get _baseUrl => '${getBackendBaseUrl()}/api/checkins';
+  static String get _questionsUrl => '${getBackendBaseUrl()}/api/questions';
+
+  static int? _parseIntId(String raw) => int.tryParse(raw.trim());
+
+  static List<int> _extractQuestionIds(dynamic decoded) {
+    if (decoded is! List) return const [];
+
+    final ids = <int>[];
+    for (final item in decoded) {
+      if (item is! Map<String, dynamic>) continue;
+      final rawId = item['id'];
+      if (rawId is int) {
+        ids.add(rawId);
+      } else if (rawId is num) {
+        ids.add(rawId.toInt());
+      } else if (rawId is String) {
+        final parsed = int.tryParse(rawId);
+        if (parsed != null) ids.add(parsed);
+      }
+    }
+    return ids;
+  }
+
+  static Future<List<int>> _fetchActiveQuestionIds() async {
+    final url = Uri.parse(_questionsUrl).replace(
+      queryParameters: const {'active': 'true'},
+    );
+    final response = await http.get(
+      url,
+      headers: const {'Accept': 'application/json'},
+    );
+    if (response.statusCode != 200) return const [];
+
+    final decoded = jsonDecode(response.body);
+    return _extractQuestionIds(decoded);
+  }
 
   /// Adds a new check-in for a patient.
-  /// Example use: CheckinService.addCheckin(patientId, caregiverId);
+  /// Uses the snapshot creation contract: patientId + selectedQuestionIds.
   static Future<bool> addCheckin(String patientId, String caregiverId) async {
+    if (caregiverId.isEmpty) return false;
+
+    final parsedPatientId = _parseIntId(patientId);
+    if (parsedPatientId == null) return false;
+
+    final selectedQuestionIds = await _fetchActiveQuestionIds();
+    if (selectedQuestionIds.isEmpty) return false;
+
     final url = Uri.parse(_baseUrl);
     final body = jsonEncode({
-      'patientId': patientId,
-      'caregiverId': caregiverId,
-      'timestamp': DateTime.now().toIso8601String(),
-      'status': 'completed',
+      'patientId': parsedPatientId,
+      'selectedQuestionIds': selectedQuestionIds,
     });
 
     final response = await http.post(
