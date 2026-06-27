@@ -21,6 +21,6 @@ public final class QuestionMapper {
         target.setPrompt(src.prompt());
         target.setType(src.type());
         target.setRequired(src.required());
-        target.setOrdinal(src.ordinal() != null ? src.ordinal() : 0);
+        target.setOrdinal(src.ordinal());
     }
 }

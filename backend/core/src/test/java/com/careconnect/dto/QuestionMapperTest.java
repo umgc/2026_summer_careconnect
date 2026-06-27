@@ -82,16 +82,4 @@ class QuestionMapperTest {
         verify(mockQuestion).setOrdinal(5);
     }
 
-    @Test
-    void applyUpsert_nullOrdinal_defaultsToZero() throws Exception {
-        final QuestionUpsertDTO src = new QuestionUpsertDTO(
-                "Null ordinal Q?", QuestionType.TEXT, false, null);
-
-        QuestionMapper.applyUpsert(mockQuestion, src);
-
-        verify(mockQuestion).setPrompt("Null ordinal Q?");
-        verify(mockQuestion).setType(QuestionType.TEXT);
-        verify(mockQuestion).setRequired(false);
-        verify(mockQuestion).setOrdinal(0);
-    }
 }

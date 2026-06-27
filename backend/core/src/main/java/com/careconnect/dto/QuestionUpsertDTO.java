@@ -14,6 +14,7 @@ public record QuestionUpsertDTO(
 
         boolean required,
 
+        @NotNull(message = "ordinal must not be null")
         @Min(value = 0, message = "ordinal must be 0 or greater")
         Integer ordinal
 ) { }

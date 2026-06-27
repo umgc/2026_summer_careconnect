@@ -157,23 +157,6 @@ class QuestionServiceImplTest {
         verify(repo).save(any(Question.class));
     }
 
-    @Test
-    void create_nullOrdinal_defaultsToZeroWithoutShifting() throws Exception {
-        // Arrange – null ordinal defaults to 0
-        final QuestionUpsertDTO body = new QuestionUpsertDTO("Q?", QuestionType.TEXT, false, null);
-        when(repo.existsByOrdinalAndIdNot(0, Long.MAX_VALUE)).thenReturn(false);
-        final Question saved = Question.builder().id(12L).prompt("Q?")
-                .type(QuestionType.TEXT).active(true).ordinal(0).build();
-        when(repo.save(any(Question.class))).thenReturn(saved);
-
-        // Act
-        final QuestionDTO result = service.create(body);
-
-        // Assert
-        assertThat(result.ordinal()).isEqualTo(0);
-        verify(repo, never()).shiftOrdinalsUp(anyInt(), anyLong());
-    }
-
     // ─── update() – no ordinal change ────────────────────────────────────────
 
     @Test

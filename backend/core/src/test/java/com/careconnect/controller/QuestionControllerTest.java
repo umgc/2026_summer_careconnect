@@ -259,6 +259,22 @@ class QuestionControllerTest {
 
         @Test
         @WithMockUser(username = "admin@test.com")
+        @DisplayName("Returns 400 when ordinal is null")
+        void returns400WhenOrdinalIsNull() throws Exception {
+            final String payload = "{\"prompt\":\"How are you?\",\"type\":\"TEXT\",\"required\":false,\"ordinal\":null}";
+
+            mockMvc.perform(post("/api/questions")
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("Validation failed"));
+
+            verifyNoInteractions(questionService);
+        }
+
+        @Test
+        @WithMockUser(username = "admin@test.com")
         @DisplayName("Returns 400 when ordinal is negative")
         void returns400WhenOrdinalIsNegative() throws Exception {
             final QuestionUpsertDTO invalid = new QuestionUpsertDTO(
@@ -297,6 +313,8 @@ class QuestionControllerTest {
             verifyNoInteractions(questionService);
         }
     }
+    @Nested
+    @DisplayName("PATCH /questions/{id}/active")
     class SetActive {
 
         @Test

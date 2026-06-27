@@ -69,7 +69,7 @@ public class QuestionServiceImpl implements QuestionService {
     @Override
     public Optional<QuestionDTO> update(Long id, QuestionUpsertDTO body) {
         return repo.findById(id).map(existing -> {
-            int newOrdinal = body.ordinal() != null ? body.ordinal() : existing.getOrdinal();
+            int newOrdinal = body.ordinal();
             // Only shift if ordinal is actually changing and the slot is already taken.
             if (newOrdinal != existing.getOrdinal() && repo.existsByOrdinalAndIdNot(newOrdinal, id)) {
                 repo.shiftOrdinalsUp(newOrdinal, id);
