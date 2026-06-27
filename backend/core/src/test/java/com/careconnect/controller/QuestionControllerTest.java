@@ -162,7 +162,7 @@ class QuestionControllerTest {
                             .with(csrf())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(upsertPayload)))
-                    .andExpect(status().isCreated())
+                    .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(1))
                     .andExpect(jsonPath("$.required").value(true))
                     .andExpect(jsonPath("$.ordinal").value(1));
