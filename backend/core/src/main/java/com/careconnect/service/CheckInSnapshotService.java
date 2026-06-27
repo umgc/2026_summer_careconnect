@@ -2,6 +2,7 @@ package com.careconnect.service;
 
 import com.careconnect.dto.CheckInCreateRequestDTO;
 import com.careconnect.dto.CheckInCreateResponseDTO;
+import com.careconnect.dto.CheckInSummaryDTO;
 import com.careconnect.dto.QuestionDTO;
 import com.careconnect.exception.AppException;
 import com.careconnect.model.CheckIn;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -101,5 +103,30 @@ public class CheckInSnapshotService {
             throw new AppException(HttpStatus.NOT_FOUND, "Check-in not found: " + checkInId);
         }
         return questions;
+    }
+
+    @Transactional(readOnly = true)
+    public List<CheckInSummaryDTO> listCheckInsForPatient(Long patientId) {
+        if (!patientRepository.existsById(patientId)) {
+            throw new AppException(HttpStatus.NOT_FOUND, "Patient not found: " + patientId);
+        }
+        return checkInRepository.findByPatientIdOrderByCreatedAtDesc(patientId).stream()
+                .map(this::toSummary)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<CheckInSummaryDTO> getLatestCheckInForPatient(Long patientId) {
+        return listCheckInsForPatient(patientId).stream().findFirst();
+    }
+
+    private CheckInSummaryDTO toSummary(CheckIn checkIn) {
+        return new CheckInSummaryDTO(
+                checkIn.getId(),
+                checkIn.getPatient().getId(),
+                checkIn.getCreatedAt(),
+                checkIn.getSubmittedAt(),
+                (int) checkInQuestionRepository.countByCheckIn_Id(checkIn.getId())
+        );
     }
 }

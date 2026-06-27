@@ -2,6 +2,7 @@ package com.careconnect.controller;
 
 import com.careconnect.dto.CheckInCreateRequestDTO;
 import com.careconnect.dto.CheckInCreateResponseDTO;
+import com.careconnect.dto.CheckInSummaryDTO;
 import com.careconnect.dto.QuestionDTO;
 import com.careconnect.model.User;
 import com.careconnect.security.Role;
@@ -142,5 +143,32 @@ class CheckInQuestionControllerTest {
                 .andExpect(status().isBadRequest());
 
         verify(checkInSnapshotService, never()).createCheckInWithSnapshot(any());
+    }
+
+    @Test
+    void listPatientCheckIns_returnsSummaries() throws Exception {
+        when(checkInSnapshotService.listCheckInsForPatient(7L))
+                .thenReturn(List.of(new CheckInSummaryDTO(42L, 7L, OffsetDateTime.parse("2026-06-26T10:15:30Z"), null, 3)));
+
+        mockMvc.perform(get("/api/checkins/patients/{patientId}", 7L)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].checkInId").value(42))
+                .andExpect(jsonPath("$[0].patientId").value(7))
+                .andExpect(jsonPath("$[0].questionCount").value(3));
+
+        verify(checkInSnapshotService).listCheckInsForPatient(7L);
+    }
+
+    @Test
+    void latestPatientCheckIn_returnsNoContentWhenMissing() throws Exception {
+        when(checkInSnapshotService.getLatestCheckInForPatient(7L))
+                .thenReturn(java.util.Optional.empty());
+
+        mockMvc.perform(get("/api/checkins/patients/{patientId}/latest", 7L))
+                .andExpect(status().isNoContent());
+
+        verify(checkInSnapshotService).getLatestCheckInForPatient(7L);
     }
 }

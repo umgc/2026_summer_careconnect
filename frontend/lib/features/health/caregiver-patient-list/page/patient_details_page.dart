@@ -352,6 +352,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       final symptomData = await symptomsFuture;
       final telemetryData = await telemetryFuture;
       final caregiverData = await caregiverViewFuture;
+      final checkInSummaries = await CheckinService.fetchCheckInsForPatient(
+        widget.patientId,
+      );
       await medsFuture;
 
       final profilePayload = _extractProfilePayload(profileResp);
@@ -379,7 +382,11 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       _applyCaregiverCallPolicy(caregiverData);
       _applyMoodData(moodData);
       _applySymptomData(symptomData);
-      _applyVirtualCheckIns(detailsPayload);
+      if (checkInSummaries.isNotEmpty) {
+        _applyVirtualCheckInSummaries(checkInSummaries);
+      } else {
+        _applyVirtualCheckIns(detailsPayload);
+      }
       _callHistoryPatientUserId = moodUserId;
       _applyCallHistoryData(
         patientUserId: moodUserId,
@@ -607,7 +614,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
             Padding(
               padding: const EdgeInsets.only(top: 10, right: 8),
               child: Icon(icon,
-                  size: 20, color: theme.colorScheme.primary.withOpacity(0.8)),
+                  size: 20, color: theme.colorScheme.primary.withValues(alpha: 0.8)),
             ),
             Expanded(
               child: TextField(
@@ -627,7 +634,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
             Padding(
               padding: const EdgeInsets.only(top: 2, right: 8),
               child: Icon(icon,
-                  size: 20, color: theme.colorScheme.primary.withOpacity(0.8)),
+                  size: 20, color: theme.colorScheme.primary.withValues(alpha: 0.8)),
             ),
             Expanded(
               child: Column(
@@ -734,7 +741,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                       child: Icon(
                         Icons.chat_bubble_outline,
                         size: 20,
-                        color: theme.colorScheme.primary.withOpacity(0.8),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.8),
                       ),
                     ),
                     Expanded(
@@ -1127,6 +1134,30 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
         moodLabel: _firstNonEmpty([entry['moodLabel'], _currentMoodLabel]),
         nextCheckIn: _parseDate(entry['nextCheckIn']) ?? startedAt,
         summary: _firstNonEmpty([entry['summary'], entry['notes']]),
+      );
+    }).toList();
+  }
+
+  void _applyVirtualCheckInSummaries(List<CheckInSummary> summaries) {
+    _virtualCheckIns = summaries.map((entry) {
+      final startedAt = entry.createdAt ?? DateTime.now();
+      final status = entry.submittedAt == null
+          ? CheckInStatus.missed
+          : CheckInStatus.completed;
+      final summaryText = entry.submittedAt == null
+          ? '${entry.questionCount} configured questions pending patient submission.'
+          : '${entry.questionCount} question responses submitted.';
+
+      return VirtualCheckIn(
+        id: entry.checkInId.toString(),
+        type: CheckInType.routine,
+        clinicianName: 'Care Team',
+        startedAt: startedAt,
+        durationMinutes: 0,
+        status: status,
+        moodLabel: _currentMoodLabel,
+        nextCheckIn: startedAt,
+        summary: summaryText,
       );
     }).toList();
   }

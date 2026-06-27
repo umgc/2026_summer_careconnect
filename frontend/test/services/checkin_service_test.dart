@@ -36,7 +36,12 @@ void main() {
       // Verifies the primary success path after question IDs are resolved.
       final result = await _runAddCheckinWithClient((req) async {
         if (req.method == 'GET' && req.url.path.endsWith('/api/questions')) {
-          return http.Response(jsonEncode([{'id': 1}, {'id': 2}]), 200);
+          return http.Response(
+              jsonEncode([
+                {'id': 1},
+                {'id': 2}
+              ]),
+              200);
         }
         if (req.method == 'POST' && req.url.path.endsWith('/api/checkins')) {
           return http.Response('', 201);
@@ -50,7 +55,11 @@ void main() {
       // Some backends return 200 instead of 201 on creation; both are accepted.
       final result = await _runAddCheckinWithClient((req) async {
         if (req.method == 'GET' && req.url.path.endsWith('/api/questions')) {
-          return http.Response(jsonEncode([{'id': 11}]), 200);
+          return http.Response(
+              jsonEncode([
+                {'id': 11}
+              ]),
+              200);
         }
         if (req.method == 'POST' && req.url.path.endsWith('/api/checkins')) {
           return http.Response('', 200);
@@ -64,7 +73,11 @@ void main() {
       // Any status other than 200/201 must be treated as failure.
       final result = await _runAddCheckinWithClient((req) async {
         if (req.method == 'GET' && req.url.path.endsWith('/api/questions')) {
-          return http.Response(jsonEncode([{'id': 7}]), 200);
+          return http.Response(
+              jsonEncode([
+                {'id': 7}
+              ]),
+              200);
         }
         if (req.method == 'POST' && req.url.path.endsWith('/api/checkins')) {
           return http.Response('Bad Request', 400);
@@ -78,7 +91,11 @@ void main() {
       // Server-side errors must propagate as a false result.
       final result = await _runAddCheckinWithClient((req) async {
         if (req.method == 'GET' && req.url.path.endsWith('/api/questions')) {
-          return http.Response(jsonEncode([{'id': 8}]), 200);
+          return http.Response(
+              jsonEncode([
+                {'id': 8}
+              ]),
+              200);
         }
         if (req.method == 'POST' && req.url.path.endsWith('/api/checkins')) {
           return http.Response('Server Error', 500);
@@ -109,7 +126,8 @@ void main() {
       expect(result, isFalse);
     });
 
-    test('returns false for invalid patient id before making requests', () async {
+    test('returns false for invalid patient id before making requests',
+        () async {
       var requestCount = 0;
       final result = await _runAddCheckinWithClient((_) async {
         requestCount++;
@@ -119,7 +137,8 @@ void main() {
       expect(requestCount, 0);
     });
 
-    test('returns false for empty caregiver id before making requests', () async {
+    test('returns false for empty caregiver id before making requests',
+        () async {
       var requestCount = 0;
       final result = await _runAddCheckinWithClient((_) async {
         requestCount++;
@@ -134,7 +153,12 @@ void main() {
       await _runAddCheckinWithClient((req) async {
         requests.add(req);
         if (req.method == 'GET' && req.url.path.endsWith('/api/questions')) {
-          return http.Response(jsonEncode([{'id': '21'}, {'id': 22}]), 200);
+          return http.Response(
+              jsonEncode([
+                {'id': '21'},
+                {'id': 22}
+              ]),
+              200);
         }
         if (req.method == 'POST' && req.url.path.endsWith('/api/checkins')) {
           return http.Response('', 201);
@@ -154,7 +178,12 @@ void main() {
       http.Request? postRequest;
       await _runAddCheckinWithClient((req) async {
         if (req.method == 'GET' && req.url.path.endsWith('/api/questions')) {
-          return http.Response(jsonEncode([{'id': 31}, {'id': '32'}]), 200);
+          return http.Response(
+              jsonEncode([
+                {'id': 31},
+                {'id': '32'}
+              ]),
+              200);
         }
         if (req.method == 'POST' && req.url.path.endsWith('/api/checkins')) {
           postRequest = req;
@@ -172,7 +201,11 @@ void main() {
       http.Request? postRequest;
       await _runAddCheckinWithClient((req) async {
         if (req.method == 'GET' && req.url.path.endsWith('/api/questions')) {
-          return http.Response(jsonEncode([{'id': 44}]), 200);
+          return http.Response(
+              jsonEncode([
+                {'id': 44}
+              ]),
+              200);
         }
         if (req.method == 'POST' && req.url.path.endsWith('/api/checkins')) {
           postRequest = req;
@@ -191,7 +224,11 @@ void main() {
       http.Request? postRequest;
       await _runAddCheckinWithClient((req) async {
         if (req.method == 'GET' && req.url.path.endsWith('/api/questions')) {
-          return http.Response(jsonEncode([{'id': 55}]), 200);
+          return http.Response(
+              jsonEncode([
+                {'id': 55}
+              ]),
+              200);
         }
         if (req.method == 'POST' && req.url.path.endsWith('/api/checkins')) {
           postRequest = req;
@@ -278,8 +315,8 @@ void main() {
       // returned as an integer.
       final result = await http.runWithClient(
         () => CheckinService.getCheckinCount('caregiver-1'),
-        () => MockClient((_) async =>
-            http.Response(jsonEncode({'count': 42}), 200)),
+        () => MockClient(
+            (_) async => http.Response(jsonEncode({'count': 42}), 200)),
       );
       expect(result, 42);
     });
@@ -288,8 +325,8 @@ void main() {
       // Verifies the null-coalescing default: missing "count" becomes 0.
       final result = await http.runWithClient(
         () => CheckinService.getCheckinCount('caregiver-2'),
-        () => MockClient((_) async =>
-            http.Response(jsonEncode({'other': 'field'}), 200)),
+        () => MockClient(
+            (_) async => http.Response(jsonEncode({'other': 'field'}), 200)),
       );
       expect(result, 0);
     });
@@ -298,8 +335,8 @@ void main() {
       // Verifies that an explicit null value also triggers the default of 0.
       final result = await http.runWithClient(
         () => CheckinService.getCheckinCount('caregiver-3'),
-        () => MockClient((_) async =>
-            http.Response(jsonEncode({'count': null}), 200)),
+        () => MockClient(
+            (_) async => http.Response(jsonEncode({'count': null}), 200)),
       );
       expect(result, 0);
     });
@@ -354,10 +391,55 @@ void main() {
       // A legitimate count of 0 must not be confused with an error default.
       final result = await http.runWithClient(
         () => CheckinService.getCheckinCount('new-caregiver'),
-        () => MockClient((_) async =>
-            http.Response(jsonEncode({'count': 0}), 200)),
+        () => MockClient(
+            (_) async => http.Response(jsonEncode({'count': 0}), 200)),
       );
       expect(result, 0);
+    });
+  });
+
+  // ─── fetchCheckInsForPatient ──────────────────────────────────────────────
+
+  group('CheckinService.fetchCheckInsForPatient()', () {
+    test('returns parsed check-in summaries for patient', () async {
+      final result = await http.runWithClient(
+        () => CheckinService.fetchCheckInsForPatient('7'),
+        () => MockClient((req) async {
+          expect(req.method, 'GET');
+          expect(req.url.path, contains('/api/checkins/patients/7'));
+          return http.Response(
+            jsonEncode([
+              {
+                'checkInId': 101,
+                'patientId': 7,
+                'createdAt': '2026-06-27T10:00:00Z',
+                'submittedAt': null,
+                'questionCount': 3,
+              },
+            ]),
+            200,
+          );
+        }),
+      );
+
+      expect(result, hasLength(1));
+      expect(result.first.checkInId, 101);
+      expect(result.first.patientId, 7);
+      expect(result.first.questionCount, 3);
+    });
+
+    test('returns empty list for invalid patient id', () async {
+      var requestCount = 0;
+      final result = await http.runWithClient(
+        () => CheckinService.fetchCheckInsForPatient('patient-x'),
+        () => MockClient((_) async {
+          requestCount++;
+          return http.Response('', 500);
+        }),
+      );
+
+      expect(result, isEmpty);
+      expect(requestCount, 0);
     });
   });
 }

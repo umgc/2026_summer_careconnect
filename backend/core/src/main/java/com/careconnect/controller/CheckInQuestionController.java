@@ -5,6 +5,7 @@ import com.careconnect.security.RequirePermission;
 
 import com.careconnect.dto.CheckInCreateRequestDTO;
 import com.careconnect.dto.CheckInCreateResponseDTO;
+import com.careconnect.dto.CheckInSummaryDTO;
 import com.careconnect.dto.QuestionDTO;
 import com.careconnect.service.CheckInSnapshotService;
 import com.careconnect.service.QuestionService;
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping(path = {"/api/checkins", "/v1/api/checkins"})
@@ -39,7 +41,7 @@ public class CheckInQuestionController {
      * GET /api/checkins/{checkInId}/questions
      * GET /v1/api/checkins/{checkInId}/questions
      */
-    @RequirePermission(Permission.VIEW_ASSIGNED_PATIENTS)
+    @RequirePermission(Permission.VIEW_HEALTH_DATA)
 
     @GetMapping("/{checkInId}/questions")
     public ResponseEntity<List<QuestionDTO>> getQuestions(
@@ -60,6 +62,33 @@ public class CheckInQuestionController {
         }
         List<QuestionDTO> questions = checkInSnapshotService.getSnapshotQuestions(checkInId);
         return ResponseEntity.ok(questions);
+    }
+
+    /**
+     * GET /api/checkins/patients/{patientId}
+     * GET /v1/api/checkins/patients/{patientId}
+     */
+    @RequirePermission(Permission.VIEW_HEALTH_DATA)
+    @GetMapping("/patients/{patientId}")
+    public ResponseEntity<List<CheckInSummaryDTO>> listPatientCheckIns(
+            @PathVariable("patientId") Long patientId
+    ) {
+        securityUtil.resolveCurrentUser();
+        return ResponseEntity.ok(checkInSnapshotService.listCheckInsForPatient(patientId));
+    }
+
+    /**
+     * GET /api/checkins/patients/{patientId}/latest
+     * GET /v1/api/checkins/patients/{patientId}/latest
+     */
+    @RequirePermission(Permission.VIEW_HEALTH_DATA)
+    @GetMapping("/patients/{patientId}/latest")
+    public ResponseEntity<CheckInSummaryDTO> getLatestPatientCheckIn(
+            @PathVariable("patientId") Long patientId
+    ) {
+        securityUtil.resolveCurrentUser();
+        Optional<CheckInSummaryDTO> latest = checkInSnapshotService.getLatestCheckInForPatient(patientId);
+        return latest.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     /**

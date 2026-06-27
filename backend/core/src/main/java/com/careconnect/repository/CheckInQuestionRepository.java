@@ -12,6 +12,7 @@ import java.util.List;
 public interface CheckInQuestionRepository extends JpaRepository<CheckInQuestion, CheckInQuestionId> {
     List<CheckInQuestion> findByCheckIn_IdOrderByOrdinalAsc(Long checkInId);
     boolean existsByCheckIn_IdAndQuestion_Id(Long checkInId, Long questionId);
+    long countByCheckIn_Id(Long checkInId);
 
     @Query("""
             SELECT new com.careconnect.dto.QuestionDTO(

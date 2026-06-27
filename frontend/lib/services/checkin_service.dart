@@ -3,6 +3,22 @@ import 'package:http/http.dart' as http;
 import '../config/env_constant.dart';
 import 'auth_token_manager.dart';
 
+class CheckInSummary {
+  final int checkInId;
+  final int patientId;
+  final DateTime? createdAt;
+  final DateTime? submittedAt;
+  final int questionCount;
+
+  const CheckInSummary({
+    required this.checkInId,
+    required this.patientId,
+    required this.createdAt,
+    required this.submittedAt,
+    required this.questionCount,
+  });
+}
+
 /// Service that handles creating and retrieving patient check-ins.
 /// Used by both patient and caregiver dashboards.
 class CheckinService {
@@ -101,6 +117,51 @@ class CheckinService {
     if (rawId is num) return rawId.toInt();
     if (rawId is String) return int.tryParse(rawId);
     return null;
+  }
+
+  static DateTime? _tryParseDate(dynamic raw) {
+    if (raw is! String || raw.isEmpty) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  static CheckInSummary? _toSummary(dynamic raw) {
+    if (raw is! Map<String, dynamic>) return null;
+    final rawCheckInId = raw['checkInId'];
+    final rawPatientId = raw['patientId'];
+    final checkInId = rawCheckInId is int
+        ? rawCheckInId
+        : int.tryParse(rawCheckInId?.toString() ?? '');
+    final patientId = rawPatientId is int
+        ? rawPatientId
+        : int.tryParse(rawPatientId?.toString() ?? '');
+    if (checkInId == null || patientId == null) return null;
+
+    return CheckInSummary(
+      checkInId: checkInId,
+      patientId: patientId,
+      createdAt: _tryParseDate(raw['createdAt']),
+      submittedAt: _tryParseDate(raw['submittedAt']),
+      questionCount: raw['questionCount'] is int
+          ? raw['questionCount'] as int
+          : int.tryParse(raw['questionCount']?.toString() ?? '') ?? 0,
+    );
+  }
+
+  static Future<List<CheckInSummary>> fetchCheckInsForPatient(
+    String patientId,
+  ) async {
+    final parsedPatientId = _parseIntId(patientId);
+    if (parsedPatientId == null) return const [];
+
+    final url = Uri.parse('$_baseUrl/patients/$parsedPatientId');
+    final headers = await AuthTokenManager.getAuthHeaders();
+    headers['Accept'] = 'application/json';
+    final response = await http.get(url, headers: headers);
+    if (response.statusCode != 200) return const [];
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! List) return const [];
+    return decoded.map(_toSummary).whereType<CheckInSummary>().toList();
   }
 
   /// Fetches the total number of check-ins tied to a caregiver.

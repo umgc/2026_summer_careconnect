@@ -1,6 +1,7 @@
 package com.careconnect.controller;
 
 import com.careconnect.dto.CheckInCreateResponseDTO;
+import com.careconnect.dto.CheckInSummaryDTO;
 import com.careconnect.dto.QuestionDTO;
 import com.careconnect.model.User;
 import com.careconnect.security.Role;
@@ -122,6 +123,22 @@ class CheckInQuestionControllerRbacTest {
                 .andExpect(status().isOk());
 
         verify(securityUtil).resolveCurrentUser();
+    }
+
+    @Test
+    @WithMockUser(username = "patient@test.com")
+    @DisplayName("PATIENT can list own patient check-ins")
+    void patient_canListPatientCheckIns() throws Exception {
+        when(securityUtil.resolveCurrentUser()).thenReturn(patientUser);
+        when(checkInSnapshotService.listCheckInsForPatient(3L)).thenReturn(List.of(
+                new CheckInSummaryDTO(10L, 3L, OffsetDateTime.parse("2026-06-26T10:00:00Z"), null, 2)));
+
+        mockMvc.perform(get("/api/checkins/patients/3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].checkInId").value(10));
+
+        verify(securityUtil).resolveCurrentUser();
+        verify(checkInSnapshotService).listCheckInsForPatient(3L);
     }
 
     @Test
