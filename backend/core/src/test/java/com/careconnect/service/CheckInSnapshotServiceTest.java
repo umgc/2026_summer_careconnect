@@ -171,7 +171,8 @@ class CheckInSnapshotServiceTest {
 
         when(patientRepository.existsById(8L)).thenReturn(true);
         when(checkInRepository.findTopByPatientIdOrderByCreatedAtDesc(8L)).thenReturn(Optional.of(latest));
-        when(checkInQuestionRepository.countByCheckIn_Id(100L)).thenReturn(4L);
+        when(checkInQuestionRepository.countByCheckInIds(Set.of(100L)))
+                .thenReturn(List.of(new CountProjection(100L, 4L)));
 
         Optional<com.careconnect.dto.CheckInSummaryDTO> result = service.getLatestCheckInForPatient(8L);
 
@@ -179,8 +180,8 @@ class CheckInSnapshotServiceTest {
         assertThat(result.get().checkInId()).isEqualTo(100L);
         assertThat(result.get().questionCount()).isEqualTo(4);
         verify(checkInRepository).findTopByPatientIdOrderByCreatedAtDesc(8L);
-        verify(checkInQuestionRepository).countByCheckIn_Id(100L);
-        verify(checkInQuestionRepository, never()).countByCheckInIds(anySet());
+        verify(checkInQuestionRepository).countByCheckInIds(Set.of(100L));
+        verify(checkInQuestionRepository, never()).countByCheckIn_Id(100L);
     }
 
     private static final class CountProjection implements CheckInQuestionRepository.CheckInQuestionCountProjection {

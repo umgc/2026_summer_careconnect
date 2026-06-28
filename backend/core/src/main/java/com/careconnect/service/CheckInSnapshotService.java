@@ -130,10 +130,10 @@ public class CheckInSnapshotService {
             throw new AppException(HttpStatus.NOT_FOUND, "Patient not found: " + patientId);
         }
         return checkInRepository.findTopByPatientIdOrderByCreatedAtDesc(patientId)
-                .map(checkIn -> toSummary(
-                        checkIn,
-                        Map.of(checkIn.getId(), (int) checkInQuestionRepository.countByCheckIn_Id(checkIn.getId()))
-                ));
+                .map(checkIn -> {
+                    Map<Long, Integer> counts = buildQuestionCountsMap(List.of(checkIn));
+                    return toSummary(checkIn, counts);
+                });
     }
 
     private Map<Long, Integer> buildQuestionCountsMap(List<CheckIn> checkIns) {
