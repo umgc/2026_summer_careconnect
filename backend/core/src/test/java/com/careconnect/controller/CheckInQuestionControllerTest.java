@@ -5,7 +5,9 @@ import com.careconnect.dto.CheckInCreateResponseDTO;
 import com.careconnect.dto.CheckInSummaryDTO;
 import com.careconnect.dto.QuestionDTO;
 import com.careconnect.model.User;
+import com.careconnect.security.AuthorizationService;
 import com.careconnect.security.Role;
+import com.careconnect.security.UnauthorizedException;
 import com.careconnect.service.CheckInSnapshotService;
 import com.careconnect.service.QuestionService;
 import com.careconnect.util.SecurityUtil;
@@ -16,16 +18,22 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -37,6 +45,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @ExtendWith(MockitoExtension.class)
 class CheckInQuestionControllerTest {
+    @RestControllerAdvice
+    static class UnauthorizedOnlyExceptionHandler {
+        @ExceptionHandler(UnauthorizedException.class)
+        ResponseEntity<Map<String, String>> handleUnauthorized(UnauthorizedException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+        }
+    }
 
     private MockMvc mockMvc;
 
@@ -49,6 +64,9 @@ class CheckInQuestionControllerTest {
     @Mock
     private SecurityUtil securityUtil;
 
+    @Mock
+    private AuthorizationService authorizationService;
+
     @InjectMocks
     private CheckInQuestionController controller;
 
@@ -58,6 +76,7 @@ class CheckInQuestionControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders
                 .standaloneSetup(controller)
+                .setControllerAdvice(new UnauthorizedOnlyExceptionHandler())
                 .build();
         User user = new User();
         user.setId(100L);
@@ -133,6 +152,7 @@ class CheckInQuestionControllerTest {
                 .andExpect(jsonPath("$.questionCount").value(3));
 
         verify(checkInSnapshotService).createCheckInWithSnapshot(eq(request));
+        verify(authorizationService).requirePatientAccess(any(User.class), eq(7L));
     }
 
     @Test
@@ -159,6 +179,7 @@ class CheckInQuestionControllerTest {
                 .andExpect(jsonPath("$[0].questionCount").value(3));
 
         verify(checkInSnapshotService).listCheckInsForPatient(7L);
+        verify(authorizationService).requirePatientAccess(any(User.class), eq(7L));
     }
 
     @Test
@@ -170,5 +191,18 @@ class CheckInQuestionControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(checkInSnapshotService).getLatestCheckInForPatient(7L);
+        verify(authorizationService).requirePatientAccess(any(User.class), eq(7L));
+    }
+
+    @Test
+    void listPatientCheckIns_withoutAccess_returnsForbidden() throws Exception {
+        doThrow(new UnauthorizedException("Patients can only access their own data"))
+                .when(authorizationService).requirePatientAccess(any(User.class), eq(7L));
+
+        mockMvc.perform(get("/api/checkins/patients/{patientId}", 7L)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden());
+
+        verify(checkInSnapshotService, never()).listCheckInsForPatient(any());
     }
 }

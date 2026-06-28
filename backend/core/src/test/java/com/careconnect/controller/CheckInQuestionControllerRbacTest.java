@@ -4,7 +4,9 @@ import com.careconnect.dto.CheckInCreateResponseDTO;
 import com.careconnect.dto.CheckInSummaryDTO;
 import com.careconnect.dto.QuestionDTO;
 import com.careconnect.model.User;
+import com.careconnect.security.AuthorizationService;
 import com.careconnect.security.Role;
+import com.careconnect.security.UnauthorizedException;
 import com.careconnect.service.CheckInSnapshotService;
 import com.careconnect.service.QuestionService;
 import com.careconnect.util.SecurityUtil;
@@ -21,6 +23,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -45,6 +48,9 @@ class CheckInQuestionControllerRbacTest {
 
     @MockitoBean
     private SecurityUtil securityUtil;
+
+    @MockitoBean
+    private AuthorizationService authorizationService;
 
     private User adminUser;
     private User caregiverUser;
@@ -138,7 +144,24 @@ class CheckInQuestionControllerRbacTest {
                 .andExpect(jsonPath("$[0].checkInId").value(10));
 
         verify(securityUtil).resolveCurrentUser();
+        verify(authorizationService).requirePatientAccess(patientUser, 3L);
         verify(checkInSnapshotService).listCheckInsForPatient(3L);
+    }
+
+    @Test
+    @WithMockUser(username = "patient@test.com")
+    @DisplayName("PATIENT cannot list another patient's check-ins")
+    void patient_cannotListOtherPatientCheckIns() throws Exception {
+        when(securityUtil.resolveCurrentUser()).thenReturn(patientUser);
+        doThrow(new UnauthorizedException("Patients can only access their own data"))
+                .when(authorizationService).requirePatientAccess(patientUser, 9L);
+
+        mockMvc.perform(get("/api/checkins/patients/9"))
+                .andExpect(status().isForbidden());
+
+        verify(securityUtil).resolveCurrentUser();
+        verify(authorizationService).requirePatientAccess(patientUser, 9L);
+        verifyNoInteractions(checkInSnapshotService);
     }
 
     @Test
@@ -173,6 +196,7 @@ class CheckInQuestionControllerRbacTest {
                 .andExpect(jsonPath("$.checkInId").value(10));
 
         verify(securityUtil).resolveCurrentUser();
+        verify(authorizationService).requirePatientAccess(adminUser, 3L);
         verify(checkInSnapshotService).createCheckInWithSnapshot(any());
     }
 

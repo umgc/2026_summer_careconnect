@@ -7,6 +7,9 @@ import com.careconnect.dto.CheckInCreateRequestDTO;
 import com.careconnect.dto.CheckInCreateResponseDTO;
 import com.careconnect.dto.CheckInSummaryDTO;
 import com.careconnect.dto.QuestionDTO;
+import com.careconnect.model.User;
+import com.careconnect.security.AuthorizationService;
+import com.careconnect.security.UnauthorizedException;
 import com.careconnect.service.CheckInSnapshotService;
 import com.careconnect.service.QuestionService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,15 +29,18 @@ public class CheckInQuestionController {
     private final QuestionService questionService;
     private final CheckInSnapshotService checkInSnapshotService;
     private final SecurityUtil securityUtil;
+    private final AuthorizationService authorizationService;
 
     public CheckInQuestionController(
             QuestionService questionService,
             CheckInSnapshotService checkInSnapshotService,
-            SecurityUtil securityUtil
+            SecurityUtil securityUtil,
+            AuthorizationService authorizationService
     ) {
         this.questionService = questionService;
         this.checkInSnapshotService = checkInSnapshotService;
         this.securityUtil = securityUtil;
+        this.authorizationService = authorizationService;
     }
 
     /**
@@ -72,8 +78,9 @@ public class CheckInQuestionController {
     @GetMapping("/patients/{patientId}")
     public ResponseEntity<List<CheckInSummaryDTO>> listPatientCheckIns(
             @PathVariable("patientId") Long patientId
-    ) {
-        securityUtil.resolveCurrentUser();
+    ) throws UnauthorizedException {
+        User currentUser = securityUtil.resolveCurrentUser();
+        authorizationService.requirePatientAccess(currentUser, patientId);
         return ResponseEntity.ok(checkInSnapshotService.listCheckInsForPatient(patientId));
     }
 
@@ -85,8 +92,9 @@ public class CheckInQuestionController {
     @GetMapping("/patients/{patientId}/latest")
     public ResponseEntity<CheckInSummaryDTO> getLatestPatientCheckIn(
             @PathVariable("patientId") Long patientId
-    ) {
-        securityUtil.resolveCurrentUser();
+    ) throws UnauthorizedException {
+        User currentUser = securityUtil.resolveCurrentUser();
+        authorizationService.requirePatientAccess(currentUser, patientId);
         Optional<CheckInSummaryDTO> latest = checkInSnapshotService.getLatestCheckInForPatient(patientId);
         return latest.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
@@ -99,8 +107,9 @@ public class CheckInQuestionController {
     @PostMapping
     public ResponseEntity<CheckInCreateResponseDTO> createCheckIn(
             @Valid @RequestBody CheckInCreateRequestDTO request
-    ) {
-        securityUtil.resolveCurrentUser();
+    ) throws UnauthorizedException {
+        User currentUser = securityUtil.resolveCurrentUser();
+        authorizationService.requirePatientAccess(currentUser, request.patientId());
         CheckInCreateResponseDTO created = checkInSnapshotService.createCheckInWithSnapshot(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
