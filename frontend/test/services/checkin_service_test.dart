@@ -137,15 +137,22 @@ void main() {
       expect(requestCount, 0);
     });
 
-    test('returns false for empty caregiver id before making requests',
+    test('does not require caregiver id for snapshot create flow',
         () async {
-      var requestCount = 0;
-      final result = await _runAddCheckinWithClient((_) async {
-        requestCount++;
-        return http.Response('', 500);
+      final result = await _runAddCheckinWithClient((req) async {
+        if (req.method == 'GET' && req.url.path.endsWith('/api/questions')) {
+          return http.Response(
+              jsonEncode([
+                {'id': 99}
+              ]),
+              200);
+        }
+        if (req.method == 'POST' && req.url.path.endsWith('/api/checkins')) {
+          return http.Response('', 201);
+        }
+        return http.Response('Unexpected request', 500);
       }, caregiverId: '');
-      expect(result, isFalse);
-      expect(requestCount, 0);
+      expect(result, isTrue);
     });
 
     test('fetches active questions then posts check-in', () async {

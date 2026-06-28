@@ -108,7 +108,9 @@ class RecentCheckInsWidget extends StatelessWidget {
               ),
               onPressed: () async {
                 final userProvider = Provider.of<UserProvider>(context, listen: false);
-                final patientId = userProvider.user?.id.toString() ?? '';
+                final patientId = (userProvider.user?.patientId ?? userProvider.user?.id)
+                        ?.toString() ??
+                    '';
                 final caregiverId = userProvider.user?.caregiverId.toString() ?? '';
 
                 final success = await RecentCheckInsWidget.performCheckIn(
@@ -183,18 +185,4 @@ class RecentCheckInsWidget extends StatelessWidget {
     ];
     return '${months[date.month - 1]} ${date.day}';
   }
-
-  /// Sends a check-in to the backend for this patient.
-Future<void> _recordCheckIn(String patientId, String caregiverId) async {
-  try {
-    final success = await CheckinService.addCheckin(patientId, caregiverId);
-    if (success) {
-      debugPrint('✅ Patient check-in successful. $patientId');
-    } else {
-      debugPrint('⚠️ Check-in failed.');
-    }
-  } catch (e) {
-    debugPrint('❌ Error recording check-in: $e');
-  }
-}
 }
