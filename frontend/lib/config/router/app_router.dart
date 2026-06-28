@@ -32,6 +32,8 @@ import '../../config/navigation/main_screen_config.dart';
 import '../../config/navigation/navigation_helper.dart';
 import '../../services/user_role_storage_service.dart';
 import 'package:care_connect_app/features/health/virtual_check_in/presentation/pages/patient_check_in_page_entry.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/presentation/pages/patient_check_in_detail_page.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_backend_question_model.dart';
 import 'package:care_connect_app/features/health/caregiver-patient-list/page/caregiver-patient-list.dart';
 import '../../features/welcome/presentation/pages/welcome_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -855,6 +857,29 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/virtual-checkin',
       builder: (context, state) => const PatientVirtualCheckIn(),
+    ),
+    GoRoute(
+      path: '/checkin-detail/:checkInId',
+      builder: (context, state) {
+        final checkInId = int.tryParse(state.pathParameters['checkInId'] ?? '');
+        final questionsJson = state.uri.queryParameters['questions'] ?? '[]';
+        
+        if (checkInId == null) {
+          return const Scaffold(
+            body: Center(child: Text('Invalid check-in ID')),
+          );
+        }
+        
+        // Parse questions from JSON query parameter
+        // Note: In a real app, you'd fetch this from the backend
+        // This is a simplified approach for routing
+        final questions = <BackendQuestionDto>[];
+        
+        return PatientCheckInDetailPage(
+          checkInId: checkInId,
+          questions: questions,
+        );
+      },
     ),
         //Adding Alexa login route
      GoRoute(
