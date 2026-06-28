@@ -4,6 +4,7 @@ import com.careconnect.dto.AnswerUpsertRequestDTO;
 import com.careconnect.dto.SubmitAnswersRequestDTO;
 import com.careconnect.dto.SubmitAnswersResponseDTO;
 import com.careconnect.exception.AppException;
+import com.careconnect.model.Answer;
 import com.careconnect.model.CheckIn;
 import com.careconnect.model.CheckInQuestion;
 import com.careconnect.model.CheckInQuestionId;
@@ -57,9 +58,8 @@ class AnswerSubmissionServiceTest {
                 snapshot(checkIn, 2L, "YES_NO", false),
                 snapshot(checkIn, 3L, "NUMBER", true)
         ));
-        when(answerRepository.existsByCheckIn_IdAndQuestion_Id(10L, 1L)).thenReturn(false);
-        when(answerRepository.existsByCheckIn_IdAndQuestion_Id(10L, 2L)).thenReturn(false);
-        when(answerRepository.existsByCheckIn_IdAndQuestion_Id(10L, 3L)).thenReturn(false);
+        // Mock empty existing answers (no duplicates)
+        when(answerRepository.findByCheckIn_Id(10L)).thenReturn(List.of());
 
         SubmitAnswersResponseDTO result = service.submitAnswers(10L, new SubmitAnswersRequestDTO(List.of(
                 new AnswerUpsertRequestDTO(1L, "all good", null, null),
@@ -80,7 +80,7 @@ class AnswerSubmissionServiceTest {
         when(checkInQuestionRepository.findByCheckIn_IdOrderByOrdinalAsc(10L)).thenReturn(List.of(
                 snapshot(checkIn, 1L, "NUMBER", true)
         ));
-        when(answerRepository.existsByCheckIn_IdAndQuestion_Id(10L, 1L)).thenReturn(false);
+        when(answerRepository.findByCheckIn_Id(10L)).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.submitAnswers(10L, new SubmitAnswersRequestDTO(List.of(
                 new AnswerUpsertRequestDTO(1L, "not-a-number", null, null)
@@ -94,7 +94,7 @@ class AnswerSubmissionServiceTest {
         when(checkInQuestionRepository.findByCheckIn_IdOrderByOrdinalAsc(10L)).thenReturn(List.of(
                 snapshot(checkIn, 1L, "TEXT", true)
         ));
-        when(answerRepository.existsByCheckIn_IdAndQuestion_Id(10L, 1L)).thenReturn(false);
+        when(answerRepository.findByCheckIn_Id(10L)).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.submitAnswers(10L, new SubmitAnswersRequestDTO(List.of(
                 new AnswerUpsertRequestDTO(1L, "first", null, null),
@@ -110,7 +110,7 @@ class AnswerSubmissionServiceTest {
                 snapshot(checkIn, 1L, "TEXT", true),
                 snapshot(checkIn, 2L, "TEXT", true)
         ));
-        when(answerRepository.existsByCheckIn_IdAndQuestion_Id(10L, 1L)).thenReturn(false);
+        when(answerRepository.findByCheckIn_Id(10L)).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.submitAnswers(10L, new SubmitAnswersRequestDTO(List.of(
                 new AnswerUpsertRequestDTO(1L, "only one answer", null, null)
@@ -124,7 +124,14 @@ class AnswerSubmissionServiceTest {
         when(checkInQuestionRepository.findByCheckIn_IdOrderByOrdinalAsc(10L)).thenReturn(List.of(
                 snapshot(checkIn, 1L, "TEXT", true)
         ));
-        when(answerRepository.existsByCheckIn_IdAndQuestion_Id(10L, 1L)).thenReturn(true);
+        
+        // Mock an existing answer for question 1
+        Answer existingAnswer = Answer.builder()
+                .checkIn(checkIn)
+                .question(Question.builder().id(1L).build())
+                .valueText("already there")
+                .build();
+        when(answerRepository.findByCheckIn_Id(10L)).thenReturn(List.of(existingAnswer));
 
         assertThatThrownBy(() -> service.submitAnswers(10L, new SubmitAnswersRequestDTO(List.of(
                 new AnswerUpsertRequestDTO(1L, "already there", null, null)
