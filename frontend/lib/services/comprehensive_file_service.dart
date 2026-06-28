@@ -9,22 +9,37 @@ import 'api_service.dart';
 import 'auth_token_manager.dart';
 import 'enhanced_file_service.dart';
 
-/// File upload categories based on healthcare requirements
+/// File upload categories based on healthcare requirements.
+///
+/// The [value] of each entry is the canonical token shared with the backend
+/// (`com.careconnect.model.UserFile.FileCategory`). Keeping these aligned
+/// guarantees an uploaded file is stored under the same category the user
+/// selected, instead of silently falling back to "other".
 enum FileCategory {
   // Core Healthcare
-  medicalReport('MEDICAL_REPORT', 'Medical Report', '🏥'),
+  medicalReport('MEDICAL_RECORD', 'Medical Report', '🏥'),
   labResult('LAB_RESULT', 'Lab Result', '🧪'),
   prescription('PRESCRIPTION', 'Prescription', '💊'),
-  clinicalNotes('CLINICAL_NOTES', 'Clinical Notes', '📋'),
+  clinicalNotes('CLINICAL_NOTE', 'Clinical Notes', '📋'),
 
   // Personal
-  profilePicture('PROFILE_PICTURE', 'Profile Picture', '👤'),
+  profilePicture('PROFILE_IMAGE', 'Profile Picture', '👤'),
   emergencyContact('EMERGENCY_CONTACT', 'Emergency Contact', '🚨'),
-  insuranceDoc('INSURANCE', 'Insurance Document', '🛡️'),
+  insuranceDoc('INSURANCE_DOCUMENT', 'Insurance Document', '🛡️'),
+
+  // Employment & Onboarding (Home Care Document Digitization)
+  employmentApplication('EMPLOYMENT_APPLICATION', 'Employment Application', '📝'),
+  onboardingForm('ONBOARDING_FORM', 'Onboarding Form', '🗂️'),
+  backgroundCheck('BACKGROUND_CHECK', 'Background Check', '🔎'),
+  certification('CERTIFICATION', 'Certification / License', '📜'),
+  reference('REFERENCE', 'Reference', '🧾'),
+  employmentContract('EMPLOYMENT_CONTRACT', 'Employment Contract', '✍️'),
+  taxForm('TAX_FORM', 'Tax Form (W-4)', '💵'),
+  workAuthorization('WORK_AUTHORIZATION', 'Work Authorization (I-9)', '🆔'),
 
   // AI & Communication
   aiChatUpload('AI_CHAT_UPLOAD', 'AI Chat File', '🤖'),
-  generalDocument('documents', 'General Document', '📄'),
+  generalDocument('OTHER_DOCUMENT', 'General Document', '📄'),
 
   // Data Management
   healthDataImport('HEALTH_DATA_IMPORT', 'Health Data Import', '📊'),
@@ -34,6 +49,22 @@ enum FileCategory {
   final String value;
   final String displayName;
   final String icon;
+
+  /// Document types that belong to the employment / home-care intake workflow.
+  /// Mirrors `UserFile.FileCategory.EMPLOYMENT_INTAKE` on the backend.
+  static const List<FileCategory> employmentIntake = [
+    employmentApplication,
+    onboardingForm,
+    backgroundCheck,
+    certification,
+    reference,
+    employmentContract,
+    taxForm,
+    workAuthorization,
+  ];
+
+  /// Whether this category is a hiring / onboarding intake document type.
+  bool get isEmploymentIntake => employmentIntake.contains(this);
 }
 
 class FileCategoryDropdown extends StatefulWidget {
@@ -83,6 +114,63 @@ class _FileCategoryDropdownState extends State<FileCategoryDropdown> {
       },
       initialValue: _selectedCategory,
       decoration: const InputDecoration(labelText: 'Select Category'),
+    );
+  }
+}
+
+
+/// Document-type selector for the employment / home-care intake workflow.
+///
+/// Shows only hiring and onboarding document types (see
+/// [FileCategory.employmentIntake]) and reports the current selection back to
+/// the parent via [onChanged] so it can be submitted with the upload.
+class EmploymentDocumentTypeDropdown extends StatefulWidget {
+  const EmploymentDocumentTypeDropdown({
+    super.key,
+    this.initialType,
+    this.onChanged,
+  });
+
+  final FileCategory? initialType;
+  final ValueChanged<FileCategory>? onChanged;
+
+  @override
+  State<EmploymentDocumentTypeDropdown> createState() =>
+      _EmploymentDocumentTypeDropdownState();
+}
+
+class _EmploymentDocumentTypeDropdownState
+    extends State<EmploymentDocumentTypeDropdown> {
+  late FileCategory _selectedType;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedType =
+        (widget.initialType != null && widget.initialType!.isEmploymentIntake)
+            ? widget.initialType!
+            : FileCategory.employmentIntake.first;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<FileCategory>(
+      initialValue: _selectedType,
+      decoration: const InputDecoration(
+        labelText: 'Document Type',
+        hintText: 'Select a hiring or onboarding document',
+      ),
+      items: FileCategory.employmentIntake.map((category) {
+        return DropdownMenuItem<FileCategory>(
+          value: category,
+          child: Text('${category.icon} ${category.displayName}'),
+        );
+      }).toList(),
+      onChanged: (value) {
+        if (value == null) return;
+        setState(() => _selectedType = value);
+        widget.onChanged?.call(value);
+      },
     );
   }
 }
@@ -315,6 +403,50 @@ class ComprehensiveFileService {
       );
     } catch (e) {
       print('❌ Error uploading insurance document: $e');
+      return null;
+    }
+  }
+
+  /// 7b. Employment / Home-Care Intake Document Upload
+  ///
+  /// Dedicated intake flow for hiring and onboarding forms. The selected
+  /// [documentType] must be an employment intake category; the file is linked
+  /// to the uploading owner and, when supplied, to the [patientId] /
+  /// [careCircleId] it pertains to (care-circle context).
+  ///
+  /// Returns `null` (without a network call) when [documentType] is not an
+  /// employment intake type, so callers get a clear, early rejection.
+  static Future<FileUploadResponse?> uploadEmploymentDocument({
+    required File documentFile,
+    required FileCategory documentType,
+    int? patientId,
+    int? careCircleId,
+    String? description,
+  }) async {
+    if (!documentType.isEmploymentIntake) {
+      print('❌ Invalid intake document type: ${documentType.value}. '
+          'Expected one of: '
+          '${FileCategory.employmentIntake.map((c) => c.value).join(', ')}');
+      return null;
+    }
+
+    try {
+      final additionalFields = <String, String>{
+        'documentType': documentType.value,
+        if (patientId != null) 'patientId': patientId.toString(),
+        if (careCircleId != null) 'careCircleId': careCircleId.toString(),
+      };
+
+      return await _uploadToEndpoint(
+        endpoint: '/intake',
+        file: documentFile,
+        category: documentType.value,
+        description:
+            description ?? '${documentType.displayName} (intake document)',
+        additionalFields: additionalFields,
+      );
+    } catch (e) {
+      print('❌ Error uploading intake document: $e');
       return null;
     }
   }
@@ -642,6 +774,14 @@ class ComprehensiveFileService {
       // Add form fields
       request.files.add(multipartFile);
       request.fields['category'] = category;
+      if (description != null) {
+        request.fields['description'] = description;
+      }
+      // Include any context fields (e.g. documentType, patientId, careCircleId)
+      // so uploads are linked to the correct owner / patient / care circle.
+      if (additionalFields != null) {
+        request.fields.addAll(additionalFields);
+      }
 
       print('📤 Uploading to: ${request.url}');
       print('📤 Category: $category');
