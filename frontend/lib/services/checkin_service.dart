@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/env_constant.dart';
 import 'auth_token_manager.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/answer_dto.dart';
 
 class CheckInSummary {
   final int checkInId;
@@ -175,6 +176,29 @@ class CheckinService {
       return data['count'] ?? 0;
     } else {
       return 0;
+    }
+  }
+
+  /// Submits answers for a check-in.
+  /// POST /api/checkins/{checkInId}/answers
+  static Future<SubmitAnswersResponseDTO> submitAnswers({
+    required int checkInId,
+    required SubmitAnswersRequestDTO request,
+  }) async {
+    final url = Uri.parse('$_baseUrl/$checkInId/answers');
+    final body = jsonEncode(request.toJson());
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return SubmitAnswersResponseDTO.fromJson(data);
+    } else {
+      throw Exception('Failed to submit answers: ${response.statusCode}');
     }
   }
 }

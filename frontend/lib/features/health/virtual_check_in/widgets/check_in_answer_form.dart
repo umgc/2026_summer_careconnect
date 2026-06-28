@@ -1,0 +1,232 @@
+import 'package:flutter/material.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_backend_question_model.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/question_type.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/answer_dto.dart';
+
+/// Widget that displays a form for answering check-in questions.
+/// Supports TEXT, YES_NO, TRUE_FALSE, and NUMBER question types.
+class CheckInAnswerForm extends StatefulWidget {
+  final List<BackendQuestionDto> questions;
+  final VoidCallback onSubmit;
+  final Function(List<AnswerUpsertRequestDTO>) onAnswersChanged;
+  final bool isLoading;
+
+  const CheckInAnswerForm({
+    super.key,
+    required this.questions,
+    required this.onSubmit,
+    required this.onAnswersChanged,
+    this.isLoading = false,
+  });
+
+  @override
+  State<CheckInAnswerForm> createState() => _CheckInAnswerFormState();
+}
+
+class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
+  late Map<int, dynamic> _answers; // question ID -> answer value
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _answers = {};
+  }
+
+  /// Build the appropriate input widget based on question type
+  Widget _buildQuestionInput(BackendQuestionDto question) {
+    switch (question.type) {
+      case BackendQuestionType.text:
+        return _buildTextInput(question);
+      case BackendQuestionType.yesNo:
+        return _buildYesNoInput(question);
+      case BackendQuestionType.trueFalse:
+        return _buildTrueFalseInput(question);
+      case BackendQuestionType.number:
+        return _buildNumberInput(question);
+    }
+  }
+
+  Widget _buildTextInput(BackendQuestionDto question) {
+    return TextFormField(
+      decoration: InputDecoration(
+        hintText: 'Enter your answer',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      ),
+      maxLines: null,
+      validator: question.required
+          ? (value) => (value?.isEmpty ?? true) ? 'This field is required' : null
+          : null,
+      onChanged: (value) {
+        _answers[question.id!] = value;
+        _notifyAnswersChanged();
+      },
+    );
+  }
+
+  Widget _buildYesNoInput(BackendQuestionDto question) {
+    final selected = _answers[question.id] as bool?;
+    return Row(
+      children: [
+        Expanded(
+          child: ChoiceChip(
+            label: const Text('Yes'),
+            selected: selected == true,
+            onSelected: (value) {
+              setState(() {
+                _answers[question.id!] = true;
+                _notifyAnswersChanged();
+              });
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ChoiceChip(
+            label: const Text('No'),
+            selected: selected == false,
+            onSelected: (value) {
+              setState(() {
+                _answers[question.id!] = false;
+                _notifyAnswersChanged();
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTrueFalseInput(BackendQuestionDto question) {
+    final selected = _answers[question.id] as bool?;
+    return Row(
+      children: [
+        Expanded(
+          child: ChoiceChip(
+            label: const Text('True'),
+            selected: selected == true,
+            onSelected: (value) {
+              setState(() {
+                _answers[question.id!] = true;
+                _notifyAnswersChanged();
+              });
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ChoiceChip(
+            label: const Text('False'),
+            selected: selected == false,
+            onSelected: (value) {
+              setState(() {
+                _answers[question.id!] = false;
+                _notifyAnswersChanged();
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNumberInput(BackendQuestionDto question) {
+    return TextFormField(
+      decoration: InputDecoration(
+        hintText: 'Enter a number',
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      ),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      validator: question.required
+          ? (value) {
+              if (value?.isEmpty ?? true) return 'This field is required';
+              if (num.tryParse(value!) == null) return 'Please enter a valid number';
+              return null;
+            }
+          : (value) {
+              if (value?.isNotEmpty ?? false) {
+                if (num.tryParse(value!) == null) return 'Please enter a valid number';
+              }
+              return null;
+            },
+      onChanged: (value) {
+        _answers[question.id!] = value.isEmpty ? null : num.tryParse(value);
+        _notifyAnswersChanged();
+      },
+    );
+  }
+
+  void _notifyAnswersChanged() {
+    final answerList = widget.questions
+        .where((q) => _answers.containsKey(q.id))
+        .map((q) => AnswerUpsertRequestDTO.fromInput(
+              questionId: q.id!,
+              type: q.type,
+              value: _answers[q.id],
+            ))
+        .toList();
+    widget.onAnswersChanged(answerList);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        children: [
+          ...widget.questions.map((question) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: question.prompt,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                        if (question.required)
+                          TextSpan(
+                            text: ' *',
+                            style: TextStyle(color: Colors.red.shade600),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildQuestionInput(question),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: widget.isLoading
+                  ? null
+                  : () {
+                      if (_formKey.currentState!.validate()) {
+                        widget.onSubmit();
+                      }
+                    },
+              child: widget.isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Submit Answers'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
