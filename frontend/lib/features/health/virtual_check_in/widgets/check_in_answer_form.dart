@@ -35,6 +35,20 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
 
   /// Build the appropriate input widget based on question type
   Widget _buildQuestionInput(BackendQuestionDto question) {
+    final questionId = question.id;
+    if (questionId == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Text(
+          'Invalid question data',
+          style: TextStyle(
+            color: Colors.red.shade600,
+            fontSize: 12,
+          ),
+        ),
+      );
+    }
+
     switch (question.type) {
       case BackendQuestionType.text:
         return _buildTextInput(question);
@@ -48,6 +62,11 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
   }
 
   Widget _buildTextInput(BackendQuestionDto question) {
+    final questionId = question.id;
+    if (questionId == null) {
+      return const SizedBox.shrink();
+    }
+
     return TextFormField(
       decoration: InputDecoration(
         hintText: 'Enter your answer',
@@ -59,19 +78,24 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
           ? (value) => (value?.isEmpty ?? true) ? 'This field is required' : null
           : null,
       onChanged: (value) {
-        _answers[question.id!] = value;
+        _answers[questionId] = value;
         _notifyAnswersChanged();
       },
     );
   }
 
   Widget _buildYesNoInput(BackendQuestionDto question) {
+    final questionId = question.id;
+    if (questionId == null) {
+      return const SizedBox.shrink();
+    }
+
     return FormField<bool>(
       validator: question.required
           ? (value) => value == null ? 'Please select Yes or No' : null
           : null,
       builder: (state) {
-        final selected = _answers[question.id] as bool?;
+        final selected = _answers[questionId] as bool?;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -83,7 +107,7 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
                     selected: selected == true,
                     onSelected: (value) {
                       setState(() {
-                        _answers[question.id!] = true;
+                        _answers[questionId] = true;
                         state.didChange(true);
                         _notifyAnswersChanged();
                       });
@@ -97,7 +121,7 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
                     selected: selected == false,
                     onSelected: (value) {
                       setState(() {
-                        _answers[question.id!] = false;
+                        _answers[questionId] = false;
                         state.didChange(false);
                         _notifyAnswersChanged();
                       });
@@ -121,12 +145,17 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
   }
 
   Widget _buildTrueFalseInput(BackendQuestionDto question) {
+    final questionId = question.id;
+    if (questionId == null) {
+      return const SizedBox.shrink();
+    }
+
     return FormField<bool>(
       validator: question.required
           ? (value) => value == null ? 'Please select True or False' : null
           : null,
       builder: (state) {
-        final selected = _answers[question.id] as bool?;
+        final selected = _answers[questionId] as bool?;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -138,7 +167,7 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
                     selected: selected == true,
                     onSelected: (value) {
                       setState(() {
-                        _answers[question.id!] = true;
+                        _answers[questionId] = true;
                         state.didChange(true);
                         _notifyAnswersChanged();
                       });
@@ -152,7 +181,7 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
                     selected: selected == false,
                     onSelected: (value) {
                       setState(() {
-                        _answers[question.id!] = false;
+                        _answers[questionId] = false;
                         state.didChange(false);
                         _notifyAnswersChanged();
                       });
@@ -176,6 +205,11 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
   }
 
   Widget _buildNumberInput(BackendQuestionDto question) {
+    final questionId = question.id;
+    if (questionId == null) {
+      return const SizedBox.shrink();
+    }
+
     return TextFormField(
       decoration: InputDecoration(
         hintText: 'Enter a number',
@@ -196,7 +230,7 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
               return null;
             },
       onChanged: (value) {
-        _answers[question.id!] = value.isEmpty ? null : num.tryParse(value);
+        _answers[questionId] = value.isEmpty ? null : num.tryParse(value);
         _notifyAnswersChanged();
       },
     );
@@ -204,7 +238,7 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
 
   void _notifyAnswersChanged() {
     final answerList = widget.questions
-        .where((q) => _answers.containsKey(q.id))
+        .where((q) => q.id != null && _answers.containsKey(q.id))
         .map((q) => AnswerUpsertRequestDTO.fromInput(
               questionId: q.id!,
               type: q.type,

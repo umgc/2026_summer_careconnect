@@ -251,5 +251,32 @@ void main() {
       expect(find.byType(ChoiceChip), findsWidgets);
       expect(find.byType(Form), findsOneWidget);
     });
+
+    testWidgets('shows invalid question data when backend omits an id', (WidgetTester tester) async {
+      final questions = [
+        const BackendQuestionDto(
+          id: null,
+          prompt: 'Broken question',
+          type: BackendQuestionType.text,
+          required: false,
+          active: true,
+          ordinal: 0,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CheckInAnswerForm(
+              questions: questions,
+              onSubmit: () {},
+              onAnswersChanged: (answers) {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Invalid question data'), findsOneWidget);
+    });
   });
 }

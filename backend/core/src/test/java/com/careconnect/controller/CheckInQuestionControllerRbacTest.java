@@ -34,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(CheckInQuestionController.class)
-@DisplayName("CheckInQuestionController RBAC Tests")
+@DisplayName("CheckInQuestionController Access Tests")
 class CheckInQuestionControllerRbacTest {
 
     @Autowired
