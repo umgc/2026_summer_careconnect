@@ -123,7 +123,15 @@ Resources:
                   - kinesisvideo:PutMedia
                   - kinesisvideo:TagStream
                   - kinesisvideo:ListStreams
+                  - kinesisvideo:ListFragments
                 Resource: !Sub arn:aws:kinesisvideo:${AWS::Region}:${AWS::AccountId}:stream/*
+              - Sid: ChimeMediaStreamPipelines
+                Effect: Allow
+                Action:
+                  - chime:CreateMediaStreamPipeline
+                  - chime:DeleteMediaStreamPipeline
+                  - chime:GetMediaPipeline
+                Resource: '*'
               - Sid: ChimeMediaInsights
                 Effect: Allow
                 Action:
@@ -140,6 +148,7 @@ Resources:
                   - ssm:GetParameter
                 Resource:
                   - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/careconnect/${Environment}/kvs-stream-arns
+                  - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/careconnect/${Environment}/kvs-stream-pool-arn
                   - !Sub arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/careconnect/${Environment}/chime-media-insights-config-arn
 
   # Pre-provisioned KVS streams for per-attendee speaker capture (pool checkout in app).
@@ -212,6 +221,18 @@ Resources:
           - !GetAtt KvsSpeakerStream08.Arn
           - !GetAtt KvsSpeakerStream09.Arn
           - !GetAtt KvsSpeakerStream10.Arn
+
+  # Chime KVS Stream Pool for media stream pipeline ingest (create once via CLI/console).
+  # aws chime-sdk-media-pipelines create-media-pipeline-kinesis-video-stream-pool ...
+  KvsStreamPoolArnParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /careconnect/${Environment}/kvs-stream-pool-arn
+      Type: String
+      Description: >-
+        Chime media-pipeline-kinesis-video-stream-pool ARN for CreateMediaStreamPipeline ingest.
+        Set manually after creating the pool (not provisioned by this stack).
+      Value: REPLACE_WITH_CHIME_KVS_STREAM_POOL_ARN
 
   ChimeMediaInsightsConfigArnParameter:
     Type: AWS::SSM::Parameter
