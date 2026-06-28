@@ -130,8 +130,11 @@ public class CheckInQuestionController {
     public ResponseEntity<SubmitAnswersResponseDTO> submitAnswers(
             @PathVariable Long checkInId,
             @Valid @RequestBody SubmitAnswersRequestDTO request
-    ) {
-        securityUtil.resolveCurrentUser();
+    ) throws UnauthorizedException {
+        User currentUser = securityUtil.resolveCurrentUser();
+        Long patientId = checkInSnapshotService.getPatientIdForCheckIn(checkInId);
+        authorizationService.requirePatientAccess(currentUser, patientId);
+        
         SubmitAnswersResponseDTO result = answerSubmissionService.submitAnswers(checkInId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);
     }

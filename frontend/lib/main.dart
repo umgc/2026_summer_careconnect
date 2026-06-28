@@ -295,9 +295,9 @@ class _CareConnectAppState extends State<CareConnectApp> {
         textTheme: AppTheme.lightTheme.textTheme.apply(fontFamily: 'Roboto'),
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            // TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
             TargetPlatform.android: OpenUpwardsPageTransitionsBuilder(),
-            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+            // TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
             TargetPlatform.windows: ZoomPageTransitionsBuilder(),
             TargetPlatform.linux: ZoomPageTransitionsBuilder(),
             TargetPlatform.fuchsia: ZoomPageTransitionsBuilder(),
@@ -315,9 +315,9 @@ class _CareConnectAppState extends State<CareConnectApp> {
         textTheme: AppTheme.darkTheme.textTheme.apply(fontFamily: 'Roboto'),
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            // TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
             TargetPlatform.android: OpenUpwardsPageTransitionsBuilder(),
-            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+            // TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
             TargetPlatform.windows: ZoomPageTransitionsBuilder(),
             TargetPlatform.linux: ZoomPageTransitionsBuilder(),
             TargetPlatform.fuchsia: ZoomPageTransitionsBuilder(),

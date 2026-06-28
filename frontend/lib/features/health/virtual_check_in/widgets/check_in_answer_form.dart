@@ -66,68 +66,112 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
   }
 
   Widget _buildYesNoInput(BackendQuestionDto question) {
-    final selected = _answers[question.id] as bool?;
-    return Row(
-      children: [
-        Expanded(
-          child: ChoiceChip(
-            label: const Text('Yes'),
-            selected: selected == true,
-            onSelected: (value) {
-              setState(() {
-                _answers[question.id!] = true;
-                _notifyAnswersChanged();
-              });
-            },
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ChoiceChip(
-            label: const Text('No'),
-            selected: selected == false,
-            onSelected: (value) {
-              setState(() {
-                _answers[question.id!] = false;
-                _notifyAnswersChanged();
-              });
-            },
-          ),
-        ),
-      ],
+    return FormField<bool>(
+      validator: question.required
+          ? (value) => value == null ? 'Please select Yes or No' : null
+          : null,
+      builder: (state) {
+        final selected = _answers[question.id] as bool?;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Text('Yes'),
+                    selected: selected == true,
+                    onSelected: (value) {
+                      setState(() {
+                        _answers[question.id!] = true;
+                        state.didChange(true);
+                        _notifyAnswersChanged();
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Text('No'),
+                    selected: selected == false,
+                    onSelected: (value) {
+                      setState(() {
+                        _answers[question.id!] = false;
+                        state.didChange(false);
+                        _notifyAnswersChanged();
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+            if (state.hasError)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  state.errorText ?? '',
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildTrueFalseInput(BackendQuestionDto question) {
-    final selected = _answers[question.id] as bool?;
-    return Row(
-      children: [
-        Expanded(
-          child: ChoiceChip(
-            label: const Text('True'),
-            selected: selected == true,
-            onSelected: (value) {
-              setState(() {
-                _answers[question.id!] = true;
-                _notifyAnswersChanged();
-              });
-            },
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ChoiceChip(
-            label: const Text('False'),
-            selected: selected == false,
-            onSelected: (value) {
-              setState(() {
-                _answers[question.id!] = false;
-                _notifyAnswersChanged();
-              });
-            },
-          ),
-        ),
-      ],
+    return FormField<bool>(
+      validator: question.required
+          ? (value) => value == null ? 'Please select True or False' : null
+          : null,
+      builder: (state) {
+        final selected = _answers[question.id] as bool?;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Text('True'),
+                    selected: selected == true,
+                    onSelected: (value) {
+                      setState(() {
+                        _answers[question.id!] = true;
+                        state.didChange(true);
+                        _notifyAnswersChanged();
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ChoiceChip(
+                    label: const Text('False'),
+                    selected: selected == false,
+                    onSelected: (value) {
+                      setState(() {
+                        _answers[question.id!] = false;
+                        state.didChange(false);
+                        _notifyAnswersChanged();
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+            if (state.hasError)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  state.errorText ?? '',
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 

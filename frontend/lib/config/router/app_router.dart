@@ -71,6 +71,8 @@ import 'package:care_connect_app/features/invoices/screens/invoice_detail_page.d
 import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'package:care_connect_app/features/auth/presentation/pages/AlexaLoginPage.dart';
 import '../../features/usps/presentation/usps_test_screen.dart';
+import 'dart:convert';
+import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_backend_question_model.dart';
 
 
 /// Helper function to navigate to the appropriate dashboard based on stored user role
@@ -871,9 +873,17 @@ final GoRouter appRouter = GoRouter(
         }
         
         // Parse questions from JSON query parameter
-        // Note: In a real app, you'd fetch this from the backend
-        // This is a simplified approach for routing
-        final questions = <BackendQuestionDto>[];
+        List<BackendQuestionDto> questions = [];
+        try {
+          final decoded = jsonDecode(questionsJson);
+          if (decoded is List) {
+            questions = (decoded as List<dynamic>)
+                .map((q) => BackendQuestionDto.fromJson(q as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (e) {
+          // Failed to parse questions, continue with empty list
+        }
         
         return PatientCheckInDetailPage(
           checkInId: checkInId,

@@ -59,6 +59,13 @@ public class AnswerSubmissionService {
             }
         }
 
+        // Fetch all existing answers for this check-in to avoid N+1 queries
+        List<Answer> existingAnswers = answerRepository.findByCheckIn_Id(checkInId);
+        Set<Long> existingAnswerQuestionIds = new HashSet<>();
+        for (Answer answer : existingAnswers) {
+            existingAnswerQuestionIds.add(answer.getQuestion().getId());
+        }
+
         Set<Long> answeredQuestionIds = new HashSet<>();
         List<Answer> toPersist = new ArrayList<>();
         for (AnswerUpsertRequestDTO item : request.answers()) {
@@ -74,7 +81,7 @@ public class AnswerSubmissionService {
                 throw new AppException(HttpStatus.BAD_REQUEST, "Question is not assigned to this check-in: " + item.questionId());
             }
 
-            if (answerRepository.existsByCheckIn_IdAndQuestion_Id(checkInId, item.questionId())) {
+            if (existingAnswerQuestionIds.contains(item.questionId())) {
                 throw new AppException(HttpStatus.CONFLICT, "Answer already exists for question: " + item.questionId());
             }
 

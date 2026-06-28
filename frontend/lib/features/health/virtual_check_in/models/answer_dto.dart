@@ -68,23 +68,26 @@ class SubmitAnswersRequestDTO {
 /// Response DTO from answer submission
 class SubmitAnswersResponseDTO {
   final int checkInId;
-  final int submitted;
-  final List<String> validationErrors;
+  final int acceptedAnswerCount;
+  final DateTime? submittedAt;
 
   const SubmitAnswersResponseDTO({
     required this.checkInId,
-    required this.submitted,
-    required this.validationErrors,
+    required this.acceptedAnswerCount,
+    required this.submittedAt,
   });
 
   factory SubmitAnswersResponseDTO.fromJson(Map<String, dynamic> json) {
+    DateTime? submittedAt;
+    final submittedAtStr = json['submittedAt'] as String?;
+    if (submittedAtStr != null) {
+      submittedAt = DateTime.tryParse(submittedAtStr);
+    }
+
     return SubmitAnswersResponseDTO(
       checkInId: json['checkInId'] as int? ?? 0,
-      submitted: json['submitted'] as int? ?? 0,
-      validationErrors: (json['validationErrors'] as List<dynamic>?)
-              ?.cast<String>()
-              .toList() ??
-          [],
+      acceptedAnswerCount: json['acceptedAnswerCount'] as int? ?? 0,
+      submittedAt: submittedAt,
     );
   }
 }

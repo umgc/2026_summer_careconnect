@@ -136,8 +136,8 @@ void main() {
       // Arrange
       final json = {
         'checkInId': 123,
-        'submitted': 5,
-        'validationErrors': [],
+        'acceptedAnswerCount': 5,
+        'submittedAt': '2024-01-15T10:30:00Z',
       };
 
       // Act
@@ -145,16 +145,16 @@ void main() {
 
       // Assert
       expect(response.checkInId, 123);
-      expect(response.submitted, 5);
-      expect(response.validationErrors, []);
+      expect(response.acceptedAnswerCount, 5);
+      expect(response.submittedAt, isNotNull);
     });
 
-    test('fromJson with validation errors', () {
+    test('fromJson with valid response', () {
       // Arrange
       final json = {
         'checkInId': 123,
-        'submitted': 3,
-        'validationErrors': ['Question 1 is required', 'Invalid number format'],
+        'acceptedAnswerCount': 3,
+        'submittedAt': '2024-01-15T10:30:00Z',
       };
 
       // Act
@@ -162,9 +162,8 @@ void main() {
 
       // Assert
       expect(response.checkInId, 123);
-      expect(response.submitted, 3);
-      expect(response.validationErrors.length, 2);
-      expect(response.validationErrors[0], 'Question 1 is required');
+      expect(response.acceptedAnswerCount, 3);
+      expect(response.submittedAt, isNotNull);
     });
 
     test('fromJson handles missing fields gracefully', () {
@@ -176,8 +175,8 @@ void main() {
 
       // Assert
       expect(response.checkInId, 456);
-      expect(response.submitted, 0);
-      expect(response.validationErrors, []);
+      expect(response.acceptedAnswerCount, 0);
+      expect(response.submittedAt, isNull);
     });
   });
 }

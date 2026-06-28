@@ -188,9 +188,12 @@ class CheckinService {
     final url = Uri.parse('$_baseUrl/$checkInId/answers');
     final body = jsonEncode(request.toJson());
 
+    final headers = await AuthTokenManager.getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+
     final response = await http.post(
       url,
-      headers: {'Content-Type': 'application/json'},
+      headers: headers,
       body: body,
     );
 
@@ -198,7 +201,17 @@ class CheckinService {
       final data = jsonDecode(response.body);
       return SubmitAnswersResponseDTO.fromJson(data);
     } else {
-      throw Exception('Failed to submit answers: ${response.statusCode}');
+      // Parse error response from backend
+      String errorMessage = 'Failed to submit answers: ${response.statusCode}';
+      try {
+        final errorData = jsonDecode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMessage = errorData['error'];
+        }
+      } catch (_) {
+        // Failed to parse error response, use default message
+      }
+      throw Exception(errorMessage);
     }
   }
 }

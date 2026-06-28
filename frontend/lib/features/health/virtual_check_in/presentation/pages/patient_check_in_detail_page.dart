@@ -4,7 +4,6 @@ import 'package:care_connect_app/features/health/virtual_check_in/models/answer_
 import 'package:care_connect_app/features/health/virtual_check_in/widgets/check_in_answer_form.dart';
 import 'package:care_connect_app/services/checkin_service.dart';
 import 'package:care_connect_app/widgets/app_bar_helper.dart';
-import 'package:care_connect_app/widgets/common_drawer.dart';
 
 /// Patient check-in detail page that displays questions and allows answering.
 /// Shows check-in status, instructions, and the answer form.
@@ -55,40 +54,24 @@ class _PatientCheckInDetailPageState extends State<PatientCheckInDetailPage> {
 
       if (!mounted) return;
 
-      if (response.validationErrors.isEmpty) {
-        setState(() {
-          _submitted = true;
-          _isSubmitting = false;
-        });
+      setState(() {
+        _submitted = true;
+        _isSubmitting = false;
+      });
 
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                'Successfully submitted ${response.submitted} answer(s)'),
-            backgroundColor: Colors.green,
-          ),
-        );
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              'Successfully submitted ${response.acceptedAnswerCount} answer(s)'),
+          backgroundColor: Colors.green,
+        ),
+      );
 
-        // Navigate back after a short delay
-        await Future.delayed(const Duration(seconds: 2));
-        if (mounted) {
-          Navigator.of(context).pop(true); // Return true to indicate success
-        }
-      } else {
-        // Server validation errors
-        setState(() {
-          _errorMessage =
-              response.validationErrors.join('\n');
-          _isSubmitting = false;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Validation errors: ${response.validationErrors.join(', ')}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      // Navigate back after a short delay
+      await Future.delayed(const Duration(seconds: 2));
+      if (mounted) {
+        Navigator.of(context).pop(true); // Return true to indicate success
       }
     } catch (e) {
       if (!mounted) return;
@@ -110,12 +93,14 @@ class _PatientCheckInDetailPageState extends State<PatientCheckInDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBarHelper.getAppBar(
+      appBar: AppBarHelper.createAppBar(
         context,
         title: 'Check-In Questions',
-        onBackPressed: () => Navigator.of(context).pop(),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
-      drawer: const CommonDrawer(),
       body: _submitted
           ? _buildSubmissionSuccessWidget()
           : _buildAnswerFormWidget(),
