@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -138,6 +139,44 @@ class AnswerSubmissionServiceTest {
         )))).isInstanceOf(AppException.class).hasMessageContaining("Answer already exists");
 
         verify(answerRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void submitAnswers_rejectsAlreadySubmittedCheckIn() {
+        CheckIn checkIn = CheckIn.builder()
+                .id(10L)
+                .patient(Patient.builder().id(1L).build())
+                .submittedAt(OffsetDateTime.now().minusHours(1))
+                .build();
+        when(checkInRepository.findById(10L)).thenReturn(Optional.of(checkIn));
+
+        assertThatThrownBy(() -> service.submitAnswers(10L, new SubmitAnswersRequestDTO(List.of(
+                new AnswerUpsertRequestDTO(1L, "answer", null, null)
+        )))).isInstanceOf(AppException.class)
+                .hasMessageContaining("Check-in already submitted");
+
+        verify(checkInQuestionRepository, never()).findByCheckIn_IdOrderByOrdinalAsc(any());
+        verify(answerRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void submitAnswers_handlesRaceConditionOnSave() {
+        CheckIn checkIn = CheckIn.builder().id(10L).patient(Patient.builder().id(1L).build()).build();
+        when(checkInRepository.findById(10L)).thenReturn(Optional.of(checkIn));
+        when(checkInQuestionRepository.findByCheckIn_IdOrderByOrdinalAsc(10L)).thenReturn(List.of(
+                snapshot(checkIn, 1L, "TEXT", true)
+        ));
+        when(answerRepository.findByCheckIn_Id(10L)).thenReturn(List.of());
+        // Simulate race condition: concurrent submission violates unique constraint
+        when(answerRepository.saveAll(any()))
+                .thenThrow(new DataIntegrityViolationException("Duplicate key"));
+
+        assertThatThrownBy(() -> service.submitAnswers(10L, new SubmitAnswersRequestDTO(List.of(
+                new AnswerUpsertRequestDTO(1L, "answer", null, null)
+        )))).isInstanceOf(AppException.class)
+                .hasMessageContaining("Check-in submission conflict");
+
+        verify(checkInRepository, never()).save(any());
     }
 
     private CheckInQuestion snapshot(CheckIn checkIn, Long questionId, String typeSnapshot, boolean required) {

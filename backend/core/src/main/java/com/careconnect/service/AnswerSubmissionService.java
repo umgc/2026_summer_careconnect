@@ -10,6 +10,7 @@ import com.careconnect.model.CheckInQuestion;
 import com.careconnect.repository.AnswerRepository;
 import com.careconnect.repository.CheckInQuestionRepository;
 import com.careconnect.repository.CheckInRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +44,11 @@ public class AnswerSubmissionService {
     public SubmitAnswersResponseDTO submitAnswers(Long checkInId, SubmitAnswersRequestDTO request) {
         CheckIn checkIn = checkInRepository.findById(checkInId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Check-in not found: " + checkInId));
+
+        // Guard against re-submission
+        if (checkIn.getSubmittedAt() != null) {
+            throw new AppException(HttpStatus.CONFLICT, "Check-in already submitted");
+        }
 
         List<CheckInQuestion> selectedQuestions = checkInQuestionRepository.findByCheckIn_IdOrderByOrdinalAsc(checkInId);
         if (selectedQuestions.isEmpty()) {
@@ -103,9 +109,14 @@ public class AnswerSubmissionService {
             throw new AppException(HttpStatus.BAD_REQUEST, "Missing required answers for questionIds: " + missingRequired);
         }
 
-        answerRepository.saveAll(toPersist);
-        checkIn.setSubmittedAt(OffsetDateTime.now());
-        checkInRepository.save(checkIn);
+        try {
+            answerRepository.saveAll(toPersist);
+            checkIn.setSubmittedAt(OffsetDateTime.now());
+            checkInRepository.save(checkIn);
+        } catch (DataIntegrityViolationException e) {
+            // Race condition: another request already submitted this check-in or created conflicting answers
+            throw new AppException(HttpStatus.CONFLICT, "Check-in submission conflict (possible duplicate submission)");
+        }
 
         return new SubmitAnswersResponseDTO(checkInId, toPersist.size(), checkIn.getSubmittedAt());
     }
