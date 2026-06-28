@@ -87,6 +87,7 @@ class CheckInQuestionControllerTest {
     @Test
     void getQuestions_primaryPath_returnsSnapshots() throws Exception {
         final Long checkInId = 1L;
+        when(checkInSnapshotService.getPatientIdForCheckIn(checkInId)).thenReturn(7L);
         when(checkInSnapshotService.getSnapshotQuestions(checkInId))
                 .thenReturn(List.of(
                         new QuestionDTO(1L, "Snapshot prompt", "TEXT", true, true, 1)
@@ -100,11 +101,13 @@ class CheckInQuestionControllerTest {
                 .andExpect(jsonPath("$[0].type").value("TEXT"));
 
         verify(checkInSnapshotService, times(1)).getSnapshotQuestions(checkInId);
+        verify(authorizationService).requirePatientAccess(any(User.class), eq(7L));
         verify(questionService, never()).findActiveOrdered();
     }
 
     @Test
     void getQuestions_versionedPath_returnsLegacyActiveQuestions() throws Exception {
+        when(checkInSnapshotService.getPatientIdForCheckIn(99L)).thenReturn(7L);
         when(questionService.findActiveOrdered())
                 .thenReturn(List.of(
                         new QuestionDTO(10L, "Legacy active", "TEXT", true, true, 1)
@@ -116,11 +119,13 @@ class CheckInQuestionControllerTest {
                 .andExpect(jsonPath("$[0].prompt").value("Legacy active"));
 
         verify(questionService).findActiveOrdered();
+        verify(authorizationService).requirePatientAccess(any(User.class), eq(7L));
         verify(checkInSnapshotService, never()).getSnapshotQuestions(any());
     }
 
     @Test
     void getQuestions_versionedPath_withContextPath_stillUsesLegacyBehavior() throws Exception {
+        when(checkInSnapshotService.getPatientIdForCheckIn(99L)).thenReturn(7L);
         when(questionService.findActiveOrdered())
                 .thenReturn(List.of(
                         new QuestionDTO(10L, "Legacy active", "TEXT", true, true, 1)
@@ -133,6 +138,7 @@ class CheckInQuestionControllerTest {
                 .andExpect(jsonPath("$[0].prompt").value("Legacy active"));
 
         verify(questionService).findActiveOrdered();
+        verify(authorizationService).requirePatientAccess(any(User.class), eq(7L));
         verify(checkInSnapshotService, never()).getSnapshotQuestions(any());
     }
 

@@ -23,11 +23,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -125,5 +128,78 @@ class CheckInSnapshotServiceTest {
         assertThatThrownBy(() -> service.getSnapshotQuestions(5L))
                 .isInstanceOf(AppException.class)
                 .hasMessageContaining("Check-in not found");
+    }
+
+    @Test
+    void getPatientIdForCheckIn_returnsPatientId() {
+        Patient patient = Patient.builder().id(8L).build();
+        CheckIn checkIn = CheckIn.builder().id(100L).patient(patient).build();
+        when(checkInRepository.findById(100L)).thenReturn(Optional.of(checkIn));
+
+        Long result = service.getPatientIdForCheckIn(100L);
+        assertThat(result).isEqualTo(8L);
+    }
+
+    @Test
+    void listCheckInsForPatient_usesGroupedQuestionCountQuery() {
+        Patient patient = Patient.builder().id(8L).build();
+        CheckIn latest = CheckIn.builder().id(100L).patient(patient).createdAt(OffsetDateTime.parse("2026-06-27T10:00:00Z")).build();
+        CheckIn older = CheckIn.builder().id(99L).patient(patient).createdAt(OffsetDateTime.parse("2026-06-26T10:00:00Z")).build();
+
+        when(patientRepository.existsById(8L)).thenReturn(true);
+        when(checkInRepository.findByPatientIdOrderByCreatedAtDesc(8L)).thenReturn(List.of(latest, older));
+
+        CheckInQuestionRepository.CheckInQuestionCountProjection c1 = new CountProjection(100L, 3L);
+        CheckInQuestionRepository.CheckInQuestionCountProjection c2 = new CountProjection(99L, 1L);
+        when(checkInQuestionRepository.countByCheckInIds(Set.of(99L, 100L))).thenReturn(List.of(c1, c2));
+
+        var summaries = service.listCheckInsForPatient(8L);
+
+        assertThat(summaries).hasSize(2);
+        assertThat(summaries.get(0).checkInId()).isEqualTo(100L);
+        assertThat(summaries.get(0).questionCount()).isEqualTo(3);
+        assertThat(summaries.get(1).checkInId()).isEqualTo(99L);
+        assertThat(summaries.get(1).questionCount()).isEqualTo(1);
+        verify(checkInQuestionRepository).countByCheckInIds(Set.of(99L, 100L));
+        verify(checkInQuestionRepository, never()).countByCheckIn_Id(any());
+    }
+
+    @Test
+    void getLatestCheckInForPatient_fetchesSingleLatestRecord() {
+        Patient patient = Patient.builder().id(8L).build();
+        CheckIn latest = CheckIn.builder().id(100L).patient(patient).createdAt(OffsetDateTime.parse("2026-06-27T10:00:00Z")).build();
+
+        when(patientRepository.existsById(8L)).thenReturn(true);
+        when(checkInRepository.findTopByPatientIdOrderByCreatedAtDesc(8L)).thenReturn(Optional.of(latest));
+        when(checkInQuestionRepository.countByCheckIn_Id(100L)).thenReturn(4L);
+
+        Optional<com.careconnect.dto.CheckInSummaryDTO> result = service.getLatestCheckInForPatient(8L);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().checkInId()).isEqualTo(100L);
+        assertThat(result.get().questionCount()).isEqualTo(4);
+        verify(checkInRepository).findTopByPatientIdOrderByCreatedAtDesc(8L);
+        verify(checkInQuestionRepository).countByCheckIn_Id(100L);
+        verify(checkInQuestionRepository, never()).countByCheckInIds(anySet());
+    }
+
+    private static final class CountProjection implements CheckInQuestionRepository.CheckInQuestionCountProjection {
+        private final Long checkInId;
+        private final long questionCount;
+
+        private CountProjection(Long checkInId, long questionCount) {
+            this.checkInId = checkInId;
+            this.questionCount = questionCount;
+        }
+
+        @Override
+        public Long getCheckInId() {
+            return checkInId;
+        }
+
+        @Override
+        public long getQuestionCount() {
+            return questionCount;
+        }
     }
 }

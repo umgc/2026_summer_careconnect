@@ -105,8 +105,7 @@ class RecentCheckInsWidget extends StatelessWidget {
                   fontSize: 14,
                 ),
               ),
-              onPressed: () async {
-                if (!context.mounted) return;
+              onPressed: () {
                 context.push('/virtual-checkin');
               },
             ),

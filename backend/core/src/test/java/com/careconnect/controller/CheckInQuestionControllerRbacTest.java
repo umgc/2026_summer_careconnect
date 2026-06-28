@@ -78,6 +78,7 @@ class CheckInQuestionControllerRbacTest {
     @DisplayName("ADMIN can read check-in snapshot questions")
     void admin_canReadSnapshotQuestions() throws Exception {
         when(securityUtil.resolveCurrentUser()).thenReturn(adminUser);
+        when(checkInSnapshotService.getPatientIdForCheckIn(1L)).thenReturn(3L);
         when(checkInSnapshotService.getSnapshotQuestions(1L)).thenReturn(List.of(
                 new QuestionDTO(1L, "How are you?", "TEXT", true, true, 1)));
 
@@ -87,6 +88,7 @@ class CheckInQuestionControllerRbacTest {
                 .andExpect(jsonPath("$[0].prompt").value("How are you?"));
 
         verify(securityUtil).resolveCurrentUser();
+        verify(authorizationService).requirePatientAccess(adminUser, 3L);
         verify(checkInSnapshotService).getSnapshotQuestions(1L);
     }
 
@@ -95,6 +97,7 @@ class CheckInQuestionControllerRbacTest {
     @DisplayName("CAREGIVER can read snapshot questions")
     void caregiver_canReadSnapshotQuestions() throws Exception {
         when(securityUtil.resolveCurrentUser()).thenReturn(caregiverUser);
+        when(checkInSnapshotService.getPatientIdForCheckIn(1L)).thenReturn(3L);
         when(checkInSnapshotService.getSnapshotQuestions(1L)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/checkins/1/questions"))
@@ -102,6 +105,7 @@ class CheckInQuestionControllerRbacTest {
                 .andExpect(jsonPath("$.length()").value(0));
 
         verify(securityUtil).resolveCurrentUser();
+        verify(authorizationService).requirePatientAccess(caregiverUser, 3L);
         verify(checkInSnapshotService).getSnapshotQuestions(1L);
     }
 
@@ -110,12 +114,14 @@ class CheckInQuestionControllerRbacTest {
     @DisplayName("PATIENT can read snapshot questions")
     void patient_canReadSnapshotQuestions() throws Exception {
         when(securityUtil.resolveCurrentUser()).thenReturn(patientUser);
+        when(checkInSnapshotService.getPatientIdForCheckIn(1L)).thenReturn(3L);
         when(checkInSnapshotService.getSnapshotQuestions(1L)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/checkins/1/questions"))
                 .andExpect(status().isOk());
 
         verify(securityUtil).resolveCurrentUser();
+        verify(authorizationService).requirePatientAccess(patientUser, 3L);
     }
 
     @Test
@@ -123,12 +129,14 @@ class CheckInQuestionControllerRbacTest {
     @DisplayName("FAMILY_MEMBER can read snapshot questions")
     void familyMember_canReadSnapshotQuestions() throws Exception {
         when(securityUtil.resolveCurrentUser()).thenReturn(familyMemberUser);
+        when(checkInSnapshotService.getPatientIdForCheckIn(1L)).thenReturn(3L);
         when(checkInSnapshotService.getSnapshotQuestions(1L)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/checkins/1/questions"))
                 .andExpect(status().isOk());
 
         verify(securityUtil).resolveCurrentUser();
+        verify(authorizationService).requirePatientAccess(familyMemberUser, 3L);
     }
 
     @Test
@@ -169,6 +177,7 @@ class CheckInQuestionControllerRbacTest {
     @DisplayName("Versioned path returns legacy global active questions")
     void versionedPath_usesLegacyQuestionService() throws Exception {
         when(securityUtil.resolveCurrentUser()).thenReturn(adminUser);
+        when(checkInSnapshotService.getPatientIdForCheckIn(1L)).thenReturn(3L);
         when(questionService.findActiveOrdered()).thenReturn(List.of(
                 new QuestionDTO(1L, "Legacy", "TEXT", true, true, 1)));
 
@@ -176,6 +185,7 @@ class CheckInQuestionControllerRbacTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].prompt").value("Legacy"));
 
+        verify(authorizationService).requirePatientAccess(adminUser, 3L);
         verify(questionService).findActiveOrdered();
     }
 

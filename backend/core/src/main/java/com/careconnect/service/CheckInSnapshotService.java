@@ -106,27 +106,55 @@ public class CheckInSnapshotService {
     }
 
     @Transactional(readOnly = true)
+    public Long getPatientIdForCheckIn(Long checkInId) {
+        return checkInRepository.findById(checkInId)
+                .map(checkIn -> checkIn.getPatient().getId())
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Check-in not found: " + checkInId));
+    }
+
+    @Transactional(readOnly = true)
     public List<CheckInSummaryDTO> listCheckInsForPatient(Long patientId) {
         if (!patientRepository.existsById(patientId)) {
             throw new AppException(HttpStatus.NOT_FOUND, "Patient not found: " + patientId);
         }
-        return checkInRepository.findByPatientIdOrderByCreatedAtDesc(patientId).stream()
-                .map(this::toSummary)
+        List<CheckIn> checkIns = checkInRepository.findByPatientIdOrderByCreatedAtDesc(patientId);
+        Map<Long, Integer> questionCounts = buildQuestionCountsMap(checkIns);
+        return checkIns.stream()
+                .map(checkIn -> toSummary(checkIn, questionCounts))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public Optional<CheckInSummaryDTO> getLatestCheckInForPatient(Long patientId) {
-        return listCheckInsForPatient(patientId).stream().findFirst();
+        if (!patientRepository.existsById(patientId)) {
+            throw new AppException(HttpStatus.NOT_FOUND, "Patient not found: " + patientId);
+        }
+        return checkInRepository.findTopByPatientIdOrderByCreatedAtDesc(patientId)
+                .map(checkIn -> toSummary(
+                        checkIn,
+                        Map.of(checkIn.getId(), (int) checkInQuestionRepository.countByCheckIn_Id(checkIn.getId()))
+                ));
     }
 
-    private CheckInSummaryDTO toSummary(CheckIn checkIn) {
+    private Map<Long, Integer> buildQuestionCountsMap(List<CheckIn> checkIns) {
+        if (checkIns.isEmpty()) {
+            return Map.of();
+        }
+        Set<Long> checkInIds = checkIns.stream().map(CheckIn::getId).collect(Collectors.toSet());
+        return checkInQuestionRepository.countByCheckInIds(checkInIds).stream()
+                .collect(Collectors.toMap(
+                        CheckInQuestionRepository.CheckInQuestionCountProjection::getCheckInId,
+                        count -> Math.toIntExact(count.getQuestionCount())
+                ));
+    }
+
+    private CheckInSummaryDTO toSummary(CheckIn checkIn, Map<Long, Integer> questionCounts) {
         return new CheckInSummaryDTO(
                 checkIn.getId(),
                 checkIn.getPatient().getId(),
                 checkIn.getCreatedAt(),
                 checkIn.getSubmittedAt(),
-                (int) checkInQuestionRepository.countByCheckIn_Id(checkIn.getId())
+                questionCounts.getOrDefault(checkIn.getId(), 0)
         );
     }
 }

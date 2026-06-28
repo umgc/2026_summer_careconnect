@@ -62,7 +62,7 @@ class CheckinService {
 
   /// Adds a new check-in for a patient.
   /// Uses the snapshot creation contract: patientId + selectedQuestionIds.
-  static Future<bool> addCheckin(String patientId, String caregiverId) async {
+  static Future<bool> addCheckin(String patientId, String _caregiverId) async {
     final parsedPatientId = _parseIntId(patientId);
     if (parsedPatientId == null) return false;
 

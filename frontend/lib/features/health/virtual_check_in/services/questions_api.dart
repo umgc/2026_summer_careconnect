@@ -31,10 +31,9 @@ class QuestionsApi {
         .toList();
   }
 
-  /// ✅ GET /api/checkins/{checkInId}/questions
-  /// (This is the line you lost — restored here.)
+  /// GET /api/checkins/{checkInId}/questions
   Future<List<BackendQuestionDto>> listQuestionsForCheckIn(String checkInId) async {
-    final uri = Uri.parse('$_base/api/checkins/$checkInId/questions'); // <— the line you wanted
+    final uri = Uri.parse('$_base/api/checkins/$checkInId/questions');
     final res = await http.get(uri, headers: await _headers());
     if (res.statusCode != 200) {
       throw Exception('Failed to fetch check-in questions: ${res.statusCode} ${res.body}');

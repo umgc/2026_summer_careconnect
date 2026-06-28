@@ -53,9 +53,10 @@ public class CheckInQuestionController {
     public ResponseEntity<List<QuestionDTO>> getQuestions(
             @PathVariable("checkInId") Long checkInId,
             HttpServletRequest request
-    ) {
-        // RBAC: Defense-in-depth — verify caller is a real user in the database
-        securityUtil.resolveCurrentUser();
+    ) throws UnauthorizedException {
+        User currentUser = securityUtil.resolveCurrentUser();
+        Long patientId = checkInSnapshotService.getPatientIdForCheckIn(checkInId);
+        authorizationService.requirePatientAccess(currentUser, patientId);
 
         String uri = request.getRequestURI();
         String contextPath = request.getContextPath();
