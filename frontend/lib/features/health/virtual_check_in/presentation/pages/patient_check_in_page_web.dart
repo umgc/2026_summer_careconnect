@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:care_connect_app/config/env_constant.dart';
 import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_backend_question_model.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/presentation/pages/patient_check_in_detail_page.dart';
 import 'package:care_connect_app/features/health/virtual_check_in/services/checkin_api.dart';
 import 'package:care_connect_app/providers/user_provider.dart';
 import 'package:care_connect_app/services/checkin_service.dart';
@@ -88,6 +89,13 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isLoading && _error == null && _activeCheckInId != null && _assignedQuestions.isNotEmpty) {
+      return PatientCheckInDetailPage(
+        checkInId: _activeCheckInId!,
+        questions: _assignedQuestions,
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Virtual Check-In')),
       body: Center(
@@ -98,51 +106,53 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
             child: Card(
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Assigned Check-In Questionnaire',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    if (_activeCheckInId != null) ...[
-                      const SizedBox(height: 4),
-                      Text('Check-in #$_activeCheckInId'),
-                    ],
-                    const SizedBox(height: 12),
-                    if (_isLoading)
-                      const Center(child: CircularProgressIndicator())
-                    else if (_error != null)
-                      Text(_error!, style: const TextStyle(color: Colors.red))
-                    else
-                      ..._assignedQuestions.map((q) {
-                        final requiredLabel = q.required
-                            ? 'Required'
-                            : 'Optional';
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('• '),
-                              Expanded(
-                                child: Text(
-                                  '${q.prompt} ($requiredLabel, ${q.type.name})',
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Assigned Check-In Questionnaire',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      if (_activeCheckInId != null) ...[
+                        const SizedBox(height: 4),
+                        Text('Check-in #$_activeCheckInId'),
+                      ],
+                      const SizedBox(height: 12),
+                      if (_isLoading)
+                        const Center(child: CircularProgressIndicator())
+                      else if (_error != null)
+                        Text(_error!, style: const TextStyle(color: Colors.red))
+                      else
+                        ..._assignedQuestions.map((q) {
+                          final requiredLabel = q.required
+                              ? 'Required'
+                              : 'Optional';
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('• '),
+                                Expanded(
+                                  child: Text(
+                                    '${q.prompt} ($requiredLabel, ${q.type.name})',
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Camera recording flow is only available on mobile apps.',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
+                              ],
+                            ),
+                          );
+                        }),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Camera recording flow is only available on mobile apps.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
