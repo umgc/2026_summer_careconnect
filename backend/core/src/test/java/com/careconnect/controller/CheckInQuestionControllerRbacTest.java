@@ -7,6 +7,7 @@ import com.careconnect.model.User;
 import com.careconnect.security.AuthorizationService;
 import com.careconnect.security.Role;
 import com.careconnect.security.UnauthorizedException;
+import com.careconnect.service.AnswerSubmissionService;
 import com.careconnect.service.CheckInSnapshotService;
 import com.careconnect.service.QuestionService;
 import com.careconnect.util.SecurityUtil;
@@ -39,6 +40,9 @@ class CheckInQuestionControllerRbacTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private AnswerSubmissionService answerSubmissionService;
 
     @MockitoBean
     private QuestionService questionService;

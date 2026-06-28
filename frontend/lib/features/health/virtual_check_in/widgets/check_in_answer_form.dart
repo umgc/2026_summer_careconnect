@@ -107,8 +107,8 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
                     selected: selected == true,
                     onSelected: (value) {
                       setState(() {
-                        _answers[questionId] = true;
-                        state.didChange(true);
+                        _answers[questionId] = value ? true : null;
+                        state.didChange(value ? true : null);
                         _notifyAnswersChanged();
                       });
                     },
@@ -121,8 +121,8 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
                     selected: selected == false,
                     onSelected: (value) {
                       setState(() {
-                        _answers[questionId] = false;
-                        state.didChange(false);
+                        _answers[questionId] = value ? false : null;
+                        state.didChange(value ? false : null);
                         _notifyAnswersChanged();
                       });
                     },
@@ -167,8 +167,8 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
                     selected: selected == true,
                     onSelected: (value) {
                       setState(() {
-                        _answers[questionId] = true;
-                        state.didChange(true);
+                        _answers[questionId] = value ? true : null;
+                        state.didChange(value ? true : null);
                         _notifyAnswersChanged();
                       });
                     },
@@ -181,8 +181,8 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
                     selected: selected == false,
                     onSelected: (value) {
                       setState(() {
-                        _answers[questionId] = false;
-                        state.didChange(false);
+                        _answers[questionId] = value ? false : null;
+                        state.didChange(value ? false : null);
                         _notifyAnswersChanged();
                       });
                     },

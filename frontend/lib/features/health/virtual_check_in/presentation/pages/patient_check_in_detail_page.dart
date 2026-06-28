@@ -77,7 +77,9 @@ class _PatientCheckInDetailPageState extends State<PatientCheckInDetailPage> {
       if (!mounted) return;
 
       setState(() {
-        _errorMessage = 'Failed to submit answers: $e';
+        _errorMessage = e is Exception
+            ? e.toString().replaceFirst('Exception: ', '')
+            : e.toString();
         _isSubmitting = false;
       });
 
