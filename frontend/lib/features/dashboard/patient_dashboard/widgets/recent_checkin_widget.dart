@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:care_connect_app/providers/user_provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:care_connect_app/services/checkin_service.dart';
 
 /// CheckIn Model
@@ -99,7 +98,7 @@ class RecentCheckInsWidget extends StatelessWidget {
               ),
               icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
               label: const Text(
-                'Check In',
+                'Open Check-In',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -107,27 +106,8 @@ class RecentCheckInsWidget extends StatelessWidget {
                 ),
               ),
               onPressed: () async {
-                final userProvider = Provider.of<UserProvider>(context, listen: false);
-                final patientId = (userProvider.user?.patientId ?? userProvider.user?.id)
-                        ?.toString() ??
-                    '';
-                final caregiverId = userProvider.user?.caregiverId.toString() ?? '';
-
-                final success = await RecentCheckInsWidget.performCheckIn(
-                  patientId: patientId,
-                  caregiverId: caregiverId,
-                );
-
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        success ? 'Check-In successful!' : 'Check-In failed. Try again.',
-                      ),
-                      backgroundColor: success ? Colors.green : Colors.red,
-                    ),
-                  );
-                }
+                if (!context.mounted) return;
+                context.push('/virtual-checkin');
               },
             ),
           ),
