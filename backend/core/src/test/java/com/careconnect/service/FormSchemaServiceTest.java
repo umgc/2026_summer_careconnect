@@ -7,11 +7,14 @@ import com.careconnect.model.forms.FormSchema;
 import com.careconnect.model.forms.FormSection;
 import com.careconnect.model.forms.FormType;
 import com.careconnect.model.forms.SourceDocumentMapping;
+import com.careconnect.model.forms.ValidationRule;
+import com.careconnect.model.forms.ValidationRuleType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -176,7 +179,70 @@ class FormSchemaServiceTest {
                 .hasSize(2);
     }
 
+    /** DATE rule rejects a non-ISO value and accepts a valid one. */
+    @Test
+    void enforcesDateRule() {
+        FormSchema schema = singleFieldSchema(FieldType.DATE,
+                ValidationRule.builder().type(ValidationRuleType.DATE).build());
+
+        assertThat(service.validateSubmission(schema, Map.of("s.f", "not-a-date"))).isNotEmpty();
+        assertThat(service.validateSubmission(schema, Map.of("s.f", "2026-01-15"))).isEmpty();
+    }
+
+    /** AGE_MIN rule rejects a DOB below the threshold and accepts one above it. */
+    @Test
+    void enforcesAgeMinRule() {
+        FormSchema schema = singleFieldSchema(FieldType.DATE,
+                ValidationRule.builder().type(ValidationRuleType.AGE_MIN).value(18).build());
+
+        assertThat(service.validateSubmission(schema,
+                Map.of("s.f", LocalDate.now().minusYears(10).toString()))).isNotEmpty();
+        assertThat(service.validateSubmission(schema,
+                Map.of("s.f", LocalDate.now().minusYears(40).toString()))).isEmpty();
+    }
+
+    /** MIN/MAX reject non-numeric input (previously a silent no-op via NaN). */
+    @Test
+    void enforcesNumericMinMax() {
+        FormSchema minSchema = singleFieldSchema(FieldType.NUMBER,
+                ValidationRule.builder().type(ValidationRuleType.MIN).value(0).build());
+
+        assertThat(service.validateSubmission(minSchema, Map.of("s.f", "abc"))).isNotEmpty();
+        assertThat(service.validateSubmission(minSchema, Map.of("s.f", -1))).isNotEmpty();
+        assertThat(service.validateSubmission(minSchema, Map.of("s.f", 5))).isEmpty();
+    }
+
+    /** Unknown keys are stripped; sensitive fields are reported. */
+    @Test
+    void stripsUnknownKeysAndReportsSensitive() {
+        FormField ssn = FormField.builder()
+                .id("ssn").label("SSN").fieldType(FieldType.SSN).required(false).order(0)
+                .sensitive(true).build();
+        FormSection section = FormSection.builder()
+                .id("sec").title("Sec").order(0).fields(List.of(ssn)).build();
+        FormSchema schema = FormSchema.builder()
+                .formType(FormType.W4).title("t").version("1").sections(List.of(section)).build();
+
+        Map<String, Object> in = new HashMap<>();
+        in.put("sec.ssn", "123-45-6789");
+        in.put("injected_field", "<script>");
+
+        assertThat(service.retainKnownKeys(schema, in)).containsOnlyKeys("sec.ssn");
+        assertThat(service.sensitiveKeys(schema)).containsExactly("sec.ssn");
+    }
+
     // --- helpers ------------------------------------------------------------
+
+    /** A minimal schema with a single optional field carrying one validation rule. */
+    private FormSchema singleFieldSchema(FieldType type, ValidationRule rule) {
+        FormField field = FormField.builder()
+                .id("f").label("Field").fieldType(type).required(false).order(0)
+                .validations(List.of(rule)).build();
+        FormSection section = FormSection.builder()
+                .id("s").title("S").order(0).fields(List.of(field)).build();
+        return FormSchema.builder()
+                .formType(FormType.W4).title("t").version("1").sections(List.of(section)).build();
+    }
 
     private FormSchema w4Schema() {
         return service.loadBundledSchemas().stream()

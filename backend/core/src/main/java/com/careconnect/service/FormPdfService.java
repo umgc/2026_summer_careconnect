@@ -33,10 +33,15 @@ public class FormPdfService {
     private static final DateTimeFormatter TS =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    /** Build a PDF document for the submitted form. */
-    public byte[] generate(FormSchema schema, FormSubmission submission) {
-        Map<String, Object> values =
-                submission.getFieldValues() == null ? Map.of() : submission.getFieldValues();
+    /**
+     * Build a PDF document for the submitted form.
+     *
+     * @param plaintextValues the submitted values in clear text (the persisted
+     *     submission only holds ciphertext for sensitive fields); sensitive
+     *     fields are masked in the rendered PDF.
+     */
+    public byte[] generate(FormSchema schema, FormSubmission submission, Map<String, Object> plaintextValues) {
+        Map<String, Object> values = plaintextValues == null ? Map.of() : plaintextValues;
 
         Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, new Color(33, 33, 33));
         Font metaFont = FontFactory.getFont(FontFactory.HELVETICA, 9, new Color(110, 110, 110));
@@ -139,11 +144,27 @@ public class FormPdfService {
         if (v instanceof List<?> list) {
             List<String> labels = new ArrayList<>();
             for (Object item : list) {
-                labels.add(optionLabel(field, item));
+                labels.add(field.isSensitive() ? mask(String.valueOf(item)) : optionLabel(field, item));
             }
             return String.join(", ", labels);
         }
+        // Honor the field's sensitive flag: never render full PII/PHI in the PDF.
+        if (field.isSensitive()) {
+            return mask(String.valueOf(v));
+        }
         return optionLabel(field, v);
+    }
+
+    /** Mask a sensitive value, revealing only the last 4 characters (e.g. ***-**-1234). */
+    private String mask(String s) {
+        if (s == null || s.isEmpty()) {
+            return "";
+        }
+        String digits = s.replaceAll("\\s", "");
+        if (digits.length() <= 4) {
+            return "****";
+        }
+        return "****" + digits.substring(digits.length() - 4);
     }
 
     private String optionLabel(FormField field, Object v) {

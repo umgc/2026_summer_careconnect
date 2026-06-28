@@ -6,6 +6,7 @@ import com.careconnect.model.UserFile;
 import com.careconnect.model.forms.FormSubmission;
 import com.careconnect.repository.UserRepository;
 import com.careconnect.security.Role;
+import com.careconnect.service.CaregiverService;
 import com.careconnect.service.FormSubmissionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -33,11 +34,14 @@ public class FormSubmissionController {
 
     private final FormSubmissionService submissionService;
     private final UserRepository userRepository;
+    private final CaregiverService caregiverService;
 
     public FormSubmissionController(FormSubmissionService submissionService,
-                                    UserRepository userRepository) {
+                                    UserRepository userRepository,
+                                    CaregiverService caregiverService) {
         this.submissionService = submissionService;
         this.userRepository = userRepository;
+        this.caregiverService = caregiverService;
     }
 
     /**
@@ -59,6 +63,15 @@ public class FormSubmissionController {
         if (!request.isConfirmed()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Submission must be confirmed before it can be saved"));
+        }
+
+        // IDOR guard: a caregiver may only file a submission against a patient
+        // they have a care relationship with. A null patientId is a
+        // self/onboarding submission and needs no relationship check.
+        Long patientId = request.getPatientId();
+        if (patientId != null && !canAccessPatient(user, patientId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Not authorized to submit forms for this patient"));
         }
 
         UserFile.OwnerType ownerType = ownerTypeFor(user);
@@ -121,10 +134,26 @@ public class FormSubmissionController {
         return ResponseEntity.ok(Map.of("data", data));
     }
 
-    /** Hiring/onboarding forms are restricted to caregivers (admins included). */
+    /**
+     * Hiring/onboarding forms are restricted to caregiver accounts, matching the
+     * UI (the Hiring Forms tab is shown only to caregivers).
+     */
     private boolean isHiringFormsUser(User user) {
-        Role role = user.getRole();
-        return role == Role.CAREGIVER || role == Role.ADMIN;
+        return user.getRole() == Role.CAREGIVER;
+    }
+
+    /**
+     * True when the caregiver may file a submission against {@code patientId}.
+     * Denies by default if the relationship lookup fails.
+     */
+    private boolean canAccessPatient(User user, Long patientId) {
+        try {
+            return caregiverService.hasAccessToPatient(user.getId(), patientId);
+        } catch (Exception e) {
+            log.warn("Patient access check failed for user {} / patient {}: {}",
+                    user.getId(), patientId, e.getMessage());
+            return false;
+        }
     }
 
     private ResponseEntity<?> forbidden() {

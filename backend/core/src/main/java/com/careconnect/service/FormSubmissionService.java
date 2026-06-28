@@ -7,15 +7,18 @@ import com.careconnect.model.forms.FormSubmission;
 import com.careconnect.model.forms.FormType;
 import com.careconnect.repository.FormDefinitionRepository;
 import com.careconnect.repository.FormSubmissionRepository;
+import com.careconnect.security.TokenCryptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Validates and persists completed hiring/onboarding form submissions.
@@ -36,17 +39,20 @@ public class FormSubmissionService {
     private final FormSubmissionRepository submissionRepository;
     private final FormPdfService pdfService;
     private final FileManagementService fileManagementService;
+    private final TokenCryptor tokenCryptor;
 
     public FormSubmissionService(FormSchemaService schemaService,
                                  FormDefinitionRepository definitionRepository,
                                  FormSubmissionRepository submissionRepository,
                                  FormPdfService pdfService,
-                                 FileManagementService fileManagementService) {
+                                 FileManagementService fileManagementService,
+                                 TokenCryptor tokenCryptor) {
         this.schemaService = schemaService;
         this.definitionRepository = definitionRepository;
         this.submissionRepository = submissionRepository;
         this.pdfService = pdfService;
         this.fileManagementService = fileManagementService;
+        this.tokenCryptor = tokenCryptor;
     }
 
     /**
@@ -76,12 +82,21 @@ public class FormSubmissionService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Unknown form: " + formType + (version != null ? " v" + version : "")));
 
-        List<String> errors = schemaService.validateSubmission(schema, fieldValues);
+        // Drop any keys not defined by the schema so arbitrary client-supplied
+        // data is never validated or persisted.
+        Map<String, Object> values = schemaService.retainKnownKeys(schema, fieldValues);
+
+        List<String> errors = schemaService.validateSubmission(schema, values);
         if (!errors.isEmpty()) {
             return new SubmissionResult(null, errors);
         }
 
         FormDefinition definition = resolveDefinition(schema);
+
+        // Encrypt sensitive (PII/PHI) values before persistence; only ciphertext
+        // is ever written to the database.
+        Map<String, Object> storedValues =
+                encryptSensitive(values, schemaService.sensitiveKeys(schema));
 
         FormSubmission submission = FormSubmission.builder()
                 .formDefinitionId(definition.getId())
@@ -91,7 +106,7 @@ public class FormSubmissionService {
                 .ownerType(ownerType)
                 .patientId(patientId)
                 .status(FormSubmission.SubmissionStatus.SUBMITTED)
-                .fieldValues(fieldValues)
+                .fieldValues(storedValues)
                 .submittedAt(LocalDateTime.now())
                 .build();
 
@@ -100,9 +115,23 @@ public class FormSubmissionService {
                 saved.getId(), formType, schema.getVersion(), ownerType, ownerId);
 
         // File a PDF copy under the submitter's File Management ("My Files").
-        fileSubmissionCopy(schema, saved);
+        // Pass the plaintext values so the PDF service can mask sensitive fields
+        // (the persisted submission only holds ciphertext).
+        fileSubmissionCopy(schema, saved, values);
 
         return new SubmissionResult(saved, List.of());
+    }
+
+    /** Return a copy of {@code values} with sensitive keys encrypted at rest. */
+    private Map<String, Object> encryptSensitive(Map<String, Object> values, Set<String> sensitiveKeys) {
+        Map<String, Object> out = new LinkedHashMap<>(values);
+        for (String key : sensitiveKeys) {
+            Object v = out.get(key);
+            if (v != null && !(v instanceof String s && s.isBlank())) {
+                out.put(key, tokenCryptor.encrypt(String.valueOf(v)));
+            }
+        }
+        return out;
     }
 
     /**
@@ -110,9 +139,9 @@ public class FormSubmissionService {
      * owned by the submitter, then link it back via {@code userFileId}. Best
      * effort: a failure here is logged but does not discard the saved data.
      */
-    private void fileSubmissionCopy(FormSchema schema, FormSubmission submission) {
+    private void fileSubmissionCopy(FormSchema schema, FormSubmission submission, Map<String, Object> plaintextValues) {
         try {
-            byte[] pdf = pdfService.generate(schema, submission);
+            byte[] pdf = pdfService.generate(schema, submission, plaintextValues);
             String category = schema.getFileAttachment() != null
                     && schema.getFileAttachment().getCategory() != null
                     ? schema.getFileAttachment().getCategory()

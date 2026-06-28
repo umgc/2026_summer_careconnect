@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show debugPrint;
@@ -48,24 +47,12 @@ class HiringFormAssetService {
     return defs;
   }
 
-  /// Upload a completed form document (mobile/desktop) into the file-attachment
-  /// system under the form's mapped category (e.g. ONBOARDING_FORM).
+  /// Upload a completed form document into the file-attachment system under the
+  /// form's mapped category (e.g. ONBOARDING_FORM).
+  ///
+  /// Byte-based so it works identically on web and native — no `dart:io`, which
+  /// keeps this widget tree compilable for Flutter web.
   static Future<FileUploadResponse?> uploadCompletedForm({
-    required FormDefinition definition,
-    required File file,
-    int? patientId,
-  }) {
-    return EnhancedFileService.uploadFile(
-      file: file,
-      category: definition.fileCategory,
-      description: '${definition.title} (v${definition.version})',
-      patientId: patientId,
-    );
-  }
-
-  /// Upload a completed form document on web (bytes) into the file-attachment
-  /// system under the form's mapped category.
-  static Future<FileUploadResponse?> uploadCompletedFormWeb({
     required FormDefinition definition,
     required Uint8List bytes,
     required String fileName,

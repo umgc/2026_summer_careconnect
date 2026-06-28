@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../config/theme/app_theme.dart';
@@ -154,32 +151,23 @@ class _FormDetailPageState extends State<_FormDetailPage> {
         type: FileType.custom,
         allowedExtensions: const ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
         allowMultiple: false,
-        withData: kIsWeb,
+        // Load bytes on every platform so the upload path is byte-based and
+        // free of dart:io (keeps this widget compilable for Flutter web).
+        withData: true,
       );
       if (result == null || result.files.isEmpty) {
         setState(() => _uploading = false);
         return;
       }
 
-      dynamic response;
-      if (kIsWeb) {
-        final bytes = result.files.single.bytes;
-        if (bytes == null) throw Exception('Could not read selected file');
-        response = await HiringFormAssetService.uploadCompletedFormWeb(
-          definition: d,
-          bytes: bytes,
-          fileName: result.files.single.name,
-          patientId: widget.patientId,
-        );
-      } else {
-        final path = result.files.single.path;
-        if (path == null) throw Exception('Could not read selected file');
-        response = await HiringFormAssetService.uploadCompletedForm(
-          definition: d,
-          file: File(path),
-          patientId: widget.patientId,
-        );
-      }
+      final bytes = result.files.single.bytes;
+      if (bytes == null) throw Exception('Could not read selected file');
+      final response = await HiringFormAssetService.uploadCompletedForm(
+        definition: d,
+        bytes: bytes,
+        fileName: result.files.single.name,
+        patientId: widget.patientId,
+      );
 
       if (!mounted) return;
       if (response != null) {

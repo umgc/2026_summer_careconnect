@@ -12,10 +12,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -120,15 +126,29 @@ public class FormSchemaService {
     }
 
     /**
-     * Find the bundled schema for a form type. When {@code version} is null or
-     * blank the first bundled definition for the type is returned; otherwise the
-     * matching version is required.
+     * Find the bundled schema for a form type. When {@code version} is provided
+     * the exact match is returned. When it is null/blank the definition in
+     * effect today is chosen deterministically — the one with the latest
+     * {@code effectiveDate} whose [effectiveDate, expirationDate] window contains
+     * today — falling back to the latest-effective definition overall. This
+     * avoids the non-deterministic {@code findFirst()} over classpath resources
+     * once multiple versions of a form type are bundled.
      */
     public Optional<FormSchema> loadBundledSchema(FormType type, String version) {
-        return loadBundledSchemas().stream()
+        List<FormSchema> candidates = loadBundledSchemas().stream()
                 .filter(s -> s.getFormType() == type)
-                .filter(s -> version == null || version.isBlank() || version.equals(s.getVersion()))
-                .findFirst();
+                .toList();
+        if (version != null && !version.isBlank()) {
+            return candidates.stream().filter(s -> version.equals(s.getVersion())).findFirst();
+        }
+        LocalDate today = LocalDate.now();
+        Comparator<FormSchema> byEffective = Comparator.comparing(
+                FormSchema::getEffectiveDate, Comparator.nullsFirst(Comparator.naturalOrder()));
+        Optional<FormSchema> inEffect = candidates.stream()
+                .filter(s -> s.getEffectiveDate() == null || !s.getEffectiveDate().isAfter(today))
+                .filter(s -> s.getExpirationDate() == null || !s.getExpirationDate().isBefore(today))
+                .max(byEffective);
+        return inEffect.isPresent() ? inEffect : candidates.stream().max(byEffective);
     }
 
     /**
@@ -170,8 +190,8 @@ public class FormSchemaService {
                 case REQUIRED -> { /* handled by presence check above */ }
                 case MIN_LENGTH -> { if (str.length() < asInt(rule.getValue())) errors.add(msg); }
                 case MAX_LENGTH -> { if (str.length() > asInt(rule.getValue())) errors.add(msg); }
-                case MIN -> { if (asDouble(raw) < asDouble(rule.getValue())) errors.add(msg); }
-                case MAX -> { if (asDouble(raw) > asDouble(rule.getValue())) errors.add(msg); }
+                case MIN -> { Double n = asNumber(raw); if (n == null || n < asDouble(rule.getValue())) errors.add(msg); }
+                case MAX -> { Double n = asNumber(raw); if (n == null || n > asDouble(rule.getValue())) errors.add(msg); }
                 case PATTERN -> { if (rule.getPattern() != null && !Pattern.compile(rule.getPattern()).matcher(str).matches()) errors.add(msg); }
                 case EMAIL -> { if (!EMAIL.matcher(str).matches()) errors.add(msg); }
                 case SSN -> { if (!SSN.matcher(str).matches()) errors.add(msg); }
@@ -179,7 +199,28 @@ public class FormSchemaService {
                 case ROUTING_NUMBER -> { if (!ROUTING.matcher(str).matches() || !validRouting(str)) errors.add(msg); }
                 case CHECKED -> { if (!Boolean.parseBoolean(str)) errors.add(msg); }
                 case ENUM -> { if (rule.getValue() instanceof List<?> allowed && !allowed.contains(str)) errors.add(msg); }
-                case DATE, DATE_RANGE, AGE_MIN, CUSTOM -> { /* delegated to typed/business validators */ }
+                case DATE -> { if (parseIsoDate(str) == null) errors.add(msg); }
+                case AGE_MIN -> {
+                    LocalDate dob = parseIsoDate(str);
+                    if (dob == null || Period.between(dob, LocalDate.now()).getYears() < asInt(rule.getValue())) {
+                        errors.add(msg);
+                    }
+                }
+                case DATE_RANGE -> {
+                    LocalDate dt = parseIsoDate(str);
+                    if (dt == null) {
+                        errors.add(msg);
+                    } else if (rule.getValue() instanceof List<?> range && range.size() == 2) {
+                        LocalDate min = parseIsoDate(String.valueOf(range.get(0)));
+                        LocalDate max = parseIsoDate(String.valueOf(range.get(1)));
+                        if ((min != null && dt.isBefore(min)) || (max != null && dt.isAfter(max))) {
+                            errors.add(msg);
+                        }
+                    }
+                }
+                // CUSTOM is an intentional hook for business-specific validators
+                // wired in elsewhere; there is no generic rule to enforce here.
+                case CUSTOM -> { /* no generic enforcement */ }
             }
         }
     }
@@ -205,5 +246,59 @@ public class FormSchemaService {
         if (o instanceof Number n) return n.doubleValue();
         try { return Double.parseDouble(String.valueOf(o)); }
         catch (NumberFormatException e) { return Double.NaN; }
+    }
+
+    /** Parse a value as a numeric, or {@code null} when it is not a number. */
+    private Double asNumber(Object o) {
+        if (o instanceof Number n) return n.doubleValue();
+        try { return Double.parseDouble(String.valueOf(o)); }
+        catch (NumberFormatException e) { return null; }
+    }
+
+    /** Parse an ISO-8601 date (yyyy-MM-dd), or {@code null} when invalid. */
+    private LocalDate parseIsoDate(String s) {
+        try { return LocalDate.parse(s); }
+        catch (Exception e) { return null; }
+    }
+
+    /** The set of valid value keys ("sectionId.fieldId") declared by a schema. */
+    private Set<String> knownKeys(FormSchema schema) {
+        Set<String> keys = new HashSet<>();
+        if (schema.getSections() == null) return keys;
+        for (FormSection section : schema.getSections()) {
+            if (section.getFields() == null) continue;
+            for (FormField field : section.getFields()) {
+                keys.add(section.getId() + "." + field.getId());
+            }
+        }
+        return keys;
+    }
+
+    /**
+     * Return a copy of {@code values} containing only keys that correspond to a
+     * "sectionId.fieldId" defined in the schema. Unknown keys are dropped so
+     * arbitrary client-supplied data is never persisted.
+     */
+    public Map<String, Object> retainKnownKeys(FormSchema schema, Map<String, Object> values) {
+        Map<String, Object> cleaned = new LinkedHashMap<>();
+        if (values == null) return cleaned;
+        Set<String> known = knownKeys(schema);
+        for (Map.Entry<String, Object> e : values.entrySet()) {
+            if (known.contains(e.getKey())) cleaned.put(e.getKey(), e.getValue());
+        }
+        return cleaned;
+    }
+
+    /** Keys ("sectionId.fieldId") whose field is marked {@code sensitive}. */
+    public Set<String> sensitiveKeys(FormSchema schema) {
+        Set<String> keys = new HashSet<>();
+        if (schema.getSections() == null) return keys;
+        for (FormSection section : schema.getSections()) {
+            if (section.getFields() == null) continue;
+            for (FormField field : section.getFields()) {
+                if (field.isSensitive()) keys.add(section.getId() + "." + field.getId());
+            }
+        }
+        return keys;
     }
 }
