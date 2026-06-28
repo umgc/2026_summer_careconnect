@@ -74,10 +74,8 @@ void main() {
       expect(find.text('This field is required'), findsOneWidget);
     });
 
-    testWidgets('renders success state after submission', (WidgetTester tester) async {
-      // This test verifies the success UI renders
-      // In a real scenario, you'd mock the HTTP request
-      
+    testWidgets('shows form with questions when not yet submitted',
+        (WidgetTester tester) async {
       // Arrange
       final questions = [
         const BackendQuestionDto(
@@ -99,9 +97,10 @@ void main() {
         ),
       );
 
-      // Assert initial form is shown
+      // Assert the initial form (not success state) is shown
       expect(find.byType(CheckInAnswerForm), findsOneWidget);
       expect(find.byType(ElevatedButton), findsOneWidget);
+      expect(find.text('Check-In Complete!'), findsNothing);
     });
 
     testWidgets('displays all question types correctly', (WidgetTester tester) async {

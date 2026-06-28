@@ -72,7 +72,6 @@ import 'package:care_connect_app/features/invoices/models/invoice_models.dart';
 import 'package:care_connect_app/features/auth/presentation/pages/AlexaLoginPage.dart';
 import '../../features/usps/presentation/usps_test_screen.dart';
 import 'dart:convert';
-import 'package:care_connect_app/features/health/virtual_check_in/models/virtual_check_in_backend_question_model.dart';
 
 
 /// Helper function to navigate to the appropriate dashboard based on stored user role
@@ -864,27 +863,33 @@ final GoRouter appRouter = GoRouter(
       path: '/checkin-detail/:checkInId',
       builder: (context, state) {
         final checkInId = int.tryParse(state.pathParameters['checkInId'] ?? '');
-        final questionsJson = state.uri.queryParameters['questions'] ?? '[]';
-        
+
         if (checkInId == null) {
           return const Scaffold(
             body: Center(child: Text('Invalid check-in ID')),
           );
         }
-        
-        // Parse questions from JSON query parameter
+
+        // Prefer questions passed via state.extra (in-app navigation).
+        // Fall back to query parameter for deep links / web URLs.
         List<BackendQuestionDto> questions = [];
-        try {
-          final decoded = jsonDecode(questionsJson);
-          if (decoded is List) {
-            questions = (decoded as List<dynamic>)
-                .map((q) => BackendQuestionDto.fromJson(q as Map<String, dynamic>))
-                .toList();
+        final extra = state.extra;
+        if (extra is List<BackendQuestionDto>) {
+          questions = extra;
+        } else {
+          final questionsJson = state.uri.queryParameters['questions'] ?? '[]';
+          try {
+            final decoded = jsonDecode(questionsJson);
+            if (decoded is List) {
+              questions = (decoded as List<dynamic>)
+                  .map((q) => BackendQuestionDto.fromJson(q as Map<String, dynamic>))
+                  .toList();
+            }
+          } catch (e) {
+            // Failed to parse questions; continue with empty list
           }
-        } catch (e) {
-          // Failed to parse questions, continue with empty list
         }
-        
+
         return PatientCheckInDetailPage(
           checkInId: checkInId,
           questions: questions,

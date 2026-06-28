@@ -238,7 +238,13 @@ class _CheckInAnswerFormState extends State<CheckInAnswerForm> {
 
   void _notifyAnswersChanged() {
     final answerList = widget.questions
-        .where((q) => q.id != null && _answers.containsKey(q.id))
+        .where((q) {
+          if (q.id == null || !_answers.containsKey(q.id)) return false;
+          final value = _answers[q.id];
+          if (value == null) return false;
+          if (value is String && value.isEmpty) return false;
+          return true;
+        })
         .map((q) => AnswerUpsertRequestDTO.fromInput(
               questionId: q.id!,
               type: q.type,
