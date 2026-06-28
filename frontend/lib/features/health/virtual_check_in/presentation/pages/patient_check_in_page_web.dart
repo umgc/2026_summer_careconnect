@@ -62,7 +62,17 @@ class _PatientVirtualCheckInState extends State<PatientVirtualCheckIn> {
         return;
       }
 
-      final latestCheckInId = checkIns.first.checkInId;
+      final unsubmitted = checkIns.where((c) => c.submittedAt == null).toList();
+      if (unsubmitted.isEmpty) {
+        setState(() {
+          _error = 'All assigned check-ins have already been completed. '
+              'No pending check-ins to answer.';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final latestCheckInId = unsubmitted.first.checkInId;
       final api = CheckInApi(getBackendBaseUrl());
       try {
         final questions = await api.getQuestions(latestCheckInId.toString());
