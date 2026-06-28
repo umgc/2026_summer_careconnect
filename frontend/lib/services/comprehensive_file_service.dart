@@ -253,7 +253,7 @@ class ComprehensiveFileService {
         description: 'Profile picture for user $userId',
       );
     } catch (e) {
-      print('❌ Error uploading profile image: $e');
+      debugPrint('❌ Error uploading profile image: $e');
       return null;
     }
   }
@@ -286,7 +286,7 @@ class ComprehensiveFileService {
         additionalFields: {'patientId': patientId.toString()},
       );
     } catch (e) {
-      print('❌ Error uploading medical document: $e');
+      debugPrint('❌ Error uploading medical document: $e');
       return null;
     }
   }
@@ -306,7 +306,7 @@ class ComprehensiveFileService {
         additionalFields: {'patientId': patientId.toString()},
       );
     } catch (e) {
-      print('❌ Error uploading clinical notes attachment: $e');
+      debugPrint('❌ Error uploading clinical notes attachment: $e');
       return null;
     }
   }
@@ -330,7 +330,7 @@ class ComprehensiveFileService {
         additionalFields: additionalFields,
       );
     } catch (e) {
-      print('❌ Error uploading chat file: $e');
+      debugPrint('❌ Error uploading chat file: $e');
       return null;
     }
   }
@@ -363,7 +363,7 @@ class ComprehensiveFileService {
         additionalFields: {'patientId': patientId.toString()},
       );
     } catch (e) {
-      print('❌ Error uploading prescription: $e');
+      debugPrint('❌ Error uploading prescription: $e');
       return null;
     }
   }
@@ -382,7 +382,7 @@ class ComprehensiveFileService {
         description: description ?? 'Emergency contact document',
       );
     } catch (e) {
-      print('❌ Error uploading emergency contact document: $e');
+      debugPrint('❌ Error uploading emergency contact document: $e');
       return null;
     }
   }
@@ -402,7 +402,7 @@ class ComprehensiveFileService {
         additionalFields: {'patientId': patientId.toString()},
       );
     } catch (e) {
-      print('❌ Error uploading insurance document: $e');
+      debugPrint('❌ Error uploading insurance document: $e');
       return null;
     }
   }
@@ -424,7 +424,7 @@ class ComprehensiveFileService {
     String? description,
   }) async {
     if (!documentType.isEmploymentIntake) {
-      print('❌ Invalid intake document type: ${documentType.value}. '
+      debugPrint('❌ Invalid intake document type: ${documentType.value}. '
           'Expected one of: '
           '${FileCategory.employmentIntake.map((c) => c.value).join(', ')}');
       return null;
@@ -446,7 +446,7 @@ class ComprehensiveFileService {
         additionalFields: additionalFields,
       );
     } catch (e) {
-      print('❌ Error uploading intake document: $e');
+      debugPrint('❌ Error uploading intake document: $e');
       return null;
     }
   }
@@ -479,7 +479,7 @@ class ComprehensiveFileService {
         throw Exception(errorData['error'] ?? 'Failed to export data');
       }
     } catch (e) {
-      print('❌ Error exporting user data: $e');
+      debugPrint('❌ Error exporting user data: $e');
       return null;
     }
   }
@@ -514,7 +514,7 @@ class ComprehensiveFileService {
       }
       return null;
     } catch (e) {
-      print('❌ Error importing bulk data: $e');
+      debugPrint('❌ Error importing bulk data: $e');
       return null;
     }
   }
@@ -534,7 +534,7 @@ class ComprehensiveFileService {
         additionalFields: {if (backupType != null) 'backupType': backupType},
       );
     } catch (e) {
-      print('❌ Error uploading backup file: $e');
+      debugPrint('❌ Error uploading backup file: $e');
       return null;
     }
   }
@@ -548,7 +548,6 @@ class ComprehensiveFileService {
   }) async {
     try {
       final headers = await AuthTokenManager.getAuthHeaders();
-      final queryString = params?.toQueryString() ?? '';
 
       final response = await http
           .get(
@@ -567,7 +566,7 @@ class ComprehensiveFileService {
         throw Exception(errorData['error'] ?? 'Failed to get user files');
       }
     } catch (e) {
-      print('❌ Error getting user files: $e');
+      debugPrint('❌ Error getting user files: $e');
       return [];
     }
   }
@@ -578,9 +577,7 @@ class ComprehensiveFileService {
         FileQueryParams? params,
       }) async {
     try {
-      List<String> allFiles = [];
       final headers = await AuthTokenManager.getAuthHeaders();
-      final queryString = params?.toQueryString() ?? '';
 
       final response = await http
           .get(
@@ -591,14 +588,14 @@ class ComprehensiveFileService {
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
-        print('Response data returned: $responseData');
+        debugPrint('Response data returned: $responseData');
         return UserFileDTO.fromJson(responseData);
       } else {
         final errorData = json.decode(response.body);
         throw Exception(errorData['error'] ?? 'Failed to get user files');
       }
     } catch (e) {
-      print('❌ Error getting user files: $e');
+      debugPrint('❌ Error getting user files: $e');
       return null;
     }
   }
@@ -651,7 +648,7 @@ class ComprehensiveFileService {
         );
       }
     } catch (e) {
-      print('❌ Error getting patient documents: $e');
+      debugPrint('❌ Error getting patient documents: $e');
       return [];
     }
   }
@@ -694,7 +691,7 @@ class ComprehensiveFileService {
         throw Exception(errorData['error'] ?? 'Failed to search files');
       }
     } catch (e) {
-      print('❌ Error searching files: $e');
+      debugPrint('❌ Error searching files: $e');
       return [];
     }
   }
@@ -783,9 +780,9 @@ class ComprehensiveFileService {
         request.fields.addAll(additionalFields);
       }
 
-      print('📤 Uploading to: ${request.url}');
-      print('📤 Category: $category');
-      print('📤 File: ${file.path.split('/').last}');
+      debugPrint('📤 Uploading to: ${request.url}');
+      debugPrint('📤 Category: $category');
+      debugPrint('📤 File: ${file.path.split('/').last}');
 
       // Send the request
       var streamedResponse = await request.send().timeout(
@@ -793,8 +790,8 @@ class ComprehensiveFileService {
       );
       var response = await http.Response.fromStream(streamedResponse);
 
-      print('📥 Response status: ${response.statusCode}');
-      print('📥 Response body: ${response.body}');
+      debugPrint('📥 Response status: ${response.statusCode}');
+      debugPrint('📥 Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final responseData = json.decode(response.body);
@@ -804,7 +801,7 @@ class ComprehensiveFileService {
         throw Exception(errorData['error'] ?? 'Failed to upload file');
       }
     } catch (e) {
-      print('❌ Error uploading to $endpoint: $e');
+      debugPrint('❌ Error uploading to $endpoint: $e');
       return null;
     }
   }
@@ -846,13 +843,11 @@ class ComprehensiveFileService {
           if (kIsWeb) {
             // On Web version: Use bytes and filename
             Uint8List? fileBytes = result.files.single.bytes;
-            String fileName = result.files.single.name;
 
             if (fileBytes != null) {
-              File a = File(result.files.first.path!);
               return File(result.files.first.path!);
             } else {
-              print('No file bytes found.');
+              debugPrint('No file bytes found.');
               return null;
             }
           }
@@ -866,18 +861,17 @@ class ComprehensiveFileService {
           if (kIsWeb) {
             // On Web: Use bytes and filename
             Uint8List? fileBytes = result.files.single.bytes;
-            String fileName = result.files.single.name;
 
             if (fileBytes != null) {
               return File(result.files.first.path!);
             } else {
-              print('No file bytes found.');
+              debugPrint('No file bytes found.');
               return null;
             }
           }
       }
     } catch (e) {
-      print('❌ Error picking file for category ${category.displayName}: $e');
+      debugPrint('❌ Error picking file for category ${category.displayName}: $e');
       return null;
     }
     return null;
@@ -909,7 +903,7 @@ class ComprehensiveFileService {
             if (fileBytes != null) {
               return (fileBytes, fileName);
             } else {
-              print('No file bytes found.');
+              debugPrint('No file bytes found.');
               return null;
             }
           }
@@ -928,13 +922,13 @@ class ComprehensiveFileService {
             if (fileBytes != null) {
               return (fileBytes, fileName);
             } else {
-              print('No file bytes found.');
+              debugPrint('No file bytes found.');
               return null;
             }
           }
       }
     } catch (e) {
-      print('❌ Error picking file for category ${category.displayName}: $e');
+      debugPrint('❌ Error picking file for category ${category.displayName}: $e');
       return null;
     }
     return null;
@@ -947,7 +941,7 @@ class ComprehensiveFileService {
 
     // General size limit: 50MB
     if (fileSize > 50 * 1024 * 1024) {
-      print('❌ File too large: ${fileSize / 1024 / 1024}MB');
+      debugPrint('❌ File too large: ${fileSize / 1024 / 1024}MB');
       return false;
     }
 
