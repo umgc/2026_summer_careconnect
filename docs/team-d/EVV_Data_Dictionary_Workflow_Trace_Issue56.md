@@ -1,9 +1,7 @@
 # CareConnect — EVV Data Dictionary & Workflow Trace
 
 **Issue:** #56 | **Team:** D | **Sprint:** 1 | **Course:** SWEN 670  
-**Author:** Chris Garcia | **Date:** June 25, 2026 |
-
-**Ctrl + Shift + V for better viewing**
+**Author:** Chris Garcia | **Date:** June 25, 2026 | **Status:** Draft
 
 ---
 
@@ -121,7 +119,7 @@ Every EVV record moves through a defined set of statuses. The table below descri
 |---|---|---|
 | `UNDER_REVIEW` | Record created (online or offline) or correction submitted | Default starting status. Record awaits supervisor review before approval or rejection. |
 | `APPROVED` | Supervisor calls `review(approve=true)` | Record is verified and eligible for submission to external aggregators. |
-| `REJECTED` | Supervisor calls `review(approve=false)`, or original record replaced by a correction | Record has been found invalid. If replaced by a correction, the original is automatically rejected. |
+| `REJECTED` | Supervisor calls `review(approve=false)`, or **any** record replaced by a correction (regardless of current status) | Record has been found invalid. If replaced by a correction, the original is automatically rejected. Note: the correction workflow has no status guard — records in `UNDER_REVIEW`, `APPROVED`, or `REJECTED` status can all be corrected and will be set to `REJECTED`. |
 
 ---
 
@@ -173,12 +171,14 @@ When the caregiver's device has no network connectivity, a separate offline-firs
 
 ### 3.3 Correction Workflow
 
-When an approved or submitted record contains an error, a correction replaces it with a new reviewed record.
+When a record contains an error, a correction replaces it with a new reviewed record.
 
-- Supervisor or caregiver identifies an error in a submitted record.
+> ⚠️ **Important:** `EvvService.correctRecord()` has **no status guard**. A correction can be submitted against a record in **any** status — `UNDER_REVIEW`, `APPROVED`, or `REJECTED`. The original record is unconditionally set to `REJECTED` regardless of its current state. See `EvvService.java:365` — `markRejected()` is called with no preceding status check. This means the `UNDER_REVIEW → REJECTED (via correction)` and `REJECTED → REJECTED (via correction)` paths are valid in the current implementation, even though they are not reflected in the status transition table in Section 2.5.
+
+- Supervisor or caregiver identifies an error in any EVV record.
 - A correction request is submitted via `POST /v1/api/evv/records/correct` with the original record ID, changed fields, a reason code, and an explanation.
 - `EvvService.correctRecord()` creates a **new** `EvvRecord` with `isCorrected = true`, `originalRecordId` set, and `status = UNDER_REVIEW`.
-- The **original** record is automatically set to `status = REJECTED`.
+- The **original** record is automatically set to `status = REJECTED` regardless of its current status.
 - An `EvvCorrection` record is saved linking both records, storing original values vs. corrected values for audit.
 - Corrections require approval (`approvalRequired = true` on `EvvCorrection`).
 - A supervisor calls `approveCorrection()` or `rejectCorrection()` to finalize.
@@ -241,7 +241,7 @@ The following gaps were identified during the code review and documentation proc
 | 5 | The maximum supported offline window and retry backoff strategy for `syncStatus = FAILED` records are not defined or documented. | Offline / Sync | Team D | Define maximum offline duration and retry policy. Document in this artifact in Sprint 2. |
 | 6 | EOR approval trigger conditions — which service types or state codes require `eorApprovalRequired = true` — are not documented. | Compliance / Workflow | Team D | Review `EvvService` and business rules with team lead to document EOR trigger conditions. |
 | 7 | `DEFAULT_USER_ID = 1L` is hardcoded in `EvvController` for all audit log actor IDs. Every audit event records `actor = User #1` regardless of which authenticated user performed the action, breaking audit trail integrity. | ⚠️ Security / Audit | Team D — flag to Team Lead | Replace `DEFAULT_USER_ID` with `securityUtil.resolveCurrentUser().getId()` in all `EvvController` service calls. This is a correctness bug. |
-| 8 | HHAExchange submission is silently scoped to VA-only records in code (`EvvController`, `HhaExchangeBatchSubmissionService`) but this restriction does not appear in the SRS or TDD. MD and DC records are excluded without any user-visible notification. | Documentation / Compliance | Team D | Document the VA-only constraint explicitly. Confirm with team lead whether MD and DC aggregator submission is planned and update the SRS if needed. |
+| 8 | **HHAExchange VA-only constraint undocumented — and submission count is misreported** | Documentation / ⚠️ Bug | Code silently scopes HHAExchange submission to VA-only records but this restriction does not appear in the SRS or TDD. Additionally, `POST /records/submit-to-hhaexchange` always returns `{"submitted": recordIds.size()}` — the size of the **input list**, not the number of records actually forwarded. A batch of 10 IDs (5 VA, 5 MD) returns `submitted: 10` even though only 5 were transmitted. Any monitoring or UI built on this response will silently show wrong totals. **Evidence:** `EvvController.java` — `recordIds.size()` is returned rather than the actual filtered count from `submitBatch()`. | Team D — flag to Team Lead | Fix `submitToHhaExchange()` to return the actual count of records forwarded rather than the input list size. Document the VA-only constraint explicitly. Confirm with team lead if MD/DC submission is planned and update SRS accordingly. |
 
 ---
 
@@ -251,6 +251,7 @@ All endpoints are under base path `/v1/api/evv`. All require a valid JWT. Role e
 
 | Method | Path | Description | Required Role | Notes |
 |---|---|---|---|---|
+| `GET` | `/records` | List all EVV records with optional filters | ADMIN or CAREGIVER | Query params: `status` (optional), `caregiverId` (optional). Returns all records if no filters provided. Served by `EvvQueryController`. |
 | `POST` | `/records` | Create a new EVV record (online) | ADMIN or CAREGIVER | Saves record, locations, and logs `CREATED` audit event |
 | `POST` | `/records/{id}/review` | Approve or reject a record | ADMIN or CAREGIVER | On approval, queues record for submission via `EvvSubmissionService` |
 | `POST` | `/records/offline` | Create an EVV record while offline | ADMIN or CAREGIVER | Requires `X-Device-ID` header. Adds to `evv_offline_queue`. |
@@ -266,7 +267,11 @@ All endpoints are under base path `/v1/api/evv`. All require a valid JWT. Role e
 | `GET` | `/records/hhaexchange-eligible` | List VA `APPROVED` records eligible for HHAExchange | ADMIN or CAREGIVER | VA state only — other states excluded by design |
 | `POST` | `/records/hhaexchange-payload` | Preview HHAExchange JSON payload for given record IDs | ADMIN or CAREGIVER | Does not submit — for audit/debugging only |
 | `POST` | `/records/hhaexchange-payload-json` | Download HHAExchange payload as a JSON file | ADMIN or CAREGIVER | Returns attachment with filename `hhaexchange-payload.json` |
-| `POST` | `/records/submit-to-hhaexchange` | Manually trigger HHAExchange batch submission | ADMIN or CAREGIVER | Only VA `APPROVED` records are forwarded; others silently excluded |
+| `POST` | `/records/submit-to-hhaexchange` | Manually trigger HHAExchange batch submission | ADMIN or CAREGIVER | Only VA `APPROVED` records are forwarded; others silently excluded. ⚠️ Returns `submitted: recordIds.size()` (input count) not actual forwarded count — see Gap #8. |
+| `POST` | `/locations` | Save or update a check-in or check-out location | ADMIN or CAREGIVER | Upsert operation. Supports GPS coordinates or patient address snapshot. Served by `EvvLocationController`. |
+| `GET` | `/locations/records/{evvRecordId}` | Get all locations for an EVV record | ADMIN or CAREGIVER | Returns both check-in and check-out locations for the record. |
+| `GET` | `/locations/records/{evvRecordId}/{role}` | Get a specific location by role | ADMIN or CAREGIVER | Role values: `CHECK_IN` or `CHECK_OUT`. |
+| `DELETE` | `/locations/records/{evvRecordId}/{role}` | Delete a check-in or check-out location | ADMIN or CAREGIVER | Requires `DELETE_PATIENTS` permission. Returns `204 No Content`. |
 
 ---
 
@@ -278,9 +283,11 @@ The following source files were reviewed to produce this document.
 |---|---|
 | `backend/core/src/main/java/com/careconnect/model/evv/EvvRecord.java` | Primary data model — all persisted and transient fields |
 | `backend/core/src/main/java/com/careconnect/service/evv/EvvService.java` | Business logic for all EVV operations |
-| `backend/core/src/main/java/com/careconnect/controller/EvvController.java` | REST API endpoints, role enforcement, HHAExchange submission |
+| `backend/core/src/main/java/com/careconnect/controller/EvvController.java` | Core REST API endpoints, role enforcement, HHAExchange submission |
+| `backend/core/src/main/java/com/careconnect/controller/EvvQueryController.java` | List/filter EVV records endpoint (`GET /v1/api/evv/records`) |
+| `backend/core/src/main/java/com/careconnect/controller/EvvLocationController.java` | Check-in/check-out location management endpoints (`/v1/api/evv/locations`) |
 | `frontend/lib/features/evv/readme.md` | Frontend EVV user-facing workflow documentation |
 
 ---
 
-*CareConnect | Team D | SWEN 670 | June 25, 2026*
+*CareConnect | Team D | SWEN 670 | Document version 3.0 | June 29, 2026*
