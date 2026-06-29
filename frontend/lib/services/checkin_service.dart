@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/env_constant.dart';
 import 'auth_token_manager.dart';
+import 'package:care_connect_app/features/health/virtual_check_in/models/answer_dto.dart';
 
 class CheckInSummary {
   final int checkInId;
@@ -175,6 +176,42 @@ class CheckinService {
       return data['count'] ?? 0;
     } else {
       return 0;
+    }
+  }
+
+  /// Submits answers for a check-in.
+  /// POST /api/checkins/{checkInId}/answers
+  static Future<SubmitAnswersResponseDTO> submitAnswers({
+    required int checkInId,
+    required SubmitAnswersRequestDTO request,
+  }) async {
+    final url = Uri.parse('$_baseUrl/$checkInId/answers');
+    final body = jsonEncode(request.toJson());
+
+    final headers = await AuthTokenManager.getAuthHeaders();
+    headers['Content-Type'] = 'application/json';
+
+    final response = await http.post(
+      url,
+      headers: headers,
+      body: body,
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return SubmitAnswersResponseDTO.fromJson(data);
+    } else {
+      // Parse error response from backend
+      String errorMessage = 'Failed to submit answers: ${response.statusCode}';
+      try {
+        final errorData = jsonDecode(response.body);
+        if (errorData is Map && errorData['error'] != null) {
+          errorMessage = errorData['error'];
+        }
+      } catch (_) {
+        // Failed to parse error response, use default message
+      }
+      throw Exception(errorMessage);
     }
   }
 }

@@ -7,6 +7,7 @@ import com.careconnect.model.User;
 import com.careconnect.security.AuthorizationService;
 import com.careconnect.security.Role;
 import com.careconnect.security.UnauthorizedException;
+import com.careconnect.service.AnswerSubmissionService;
 import com.careconnect.service.CheckInSnapshotService;
 import com.careconnect.service.QuestionService;
 import com.careconnect.util.SecurityUtil;
@@ -34,11 +35,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(CheckInQuestionController.class)
-@DisplayName("CheckInQuestionController RBAC Tests")
+@DisplayName("CheckInQuestionController Access Tests")
 class CheckInQuestionControllerRbacTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private AnswerSubmissionService answerSubmissionService;
 
     @MockitoBean
     private QuestionService questionService;
