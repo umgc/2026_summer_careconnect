@@ -185,6 +185,11 @@ public class CallController {
       // Auto-start a system-initiated recording when the 2nd participant joins.
       // The recording will be transcribed and deleted from S3 after the call ends.
       if (meetingAlreadyActive) {
+        if (log.isInfoEnabled()) {
+          log.info(
+              "Second participant joining call {}; starting recording and KVS pipeline in background",
+              callId);
+        }
         try {
           callRecordingService.startRecording(callId, null);
         } catch (Exception e) {
@@ -192,13 +197,7 @@ public class CallController {
             log.warn("Auto-recording start failed for call {}: {}", callId, e.getMessage());
           }
         }
-        try {
-          callRecordingService.startKvsPipeline(callId);
-        } catch (Exception e) {
-          if (log.isWarnEnabled()) {
-            log.warn("KVS pipeline start failed for call {}: {}", callId, e.getMessage());
-          }
-        }
+        callRecordingService.startKvsPipelineAsync(callId);
       }
       return ResponseEntity.ok(response);
     } catch (AppException e) {

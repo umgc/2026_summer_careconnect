@@ -129,7 +129,7 @@ Resources:
                 Effect: Allow
                 Action:
                   - chime:CreateMediaStreamPipeline
-                  - chime:DeleteMediaStreamPipeline
+                  - chime:DeleteMediaPipeline
                   - chime:GetMediaPipeline
                 Resource: '*'
               - Sid: ChimeMediaInsights
