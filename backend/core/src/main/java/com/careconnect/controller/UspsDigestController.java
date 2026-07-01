@@ -9,7 +9,6 @@ import com.careconnect.security.AuthorizationService;
 import com.careconnect.security.UnauthorizedException;
 import com.careconnect.service.USPSDigestService;
 import com.careconnect.util.SecurityUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,13 +20,18 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("v1/api/usps")
-@RequiredArgsConstructor
 public class UspsDigestController {
 
     private final SecurityUtil securityUtil;
     private final AuthorizationService authorizationService;
     private final USPSDigestService uspsDigestService;
     private final UserRepository userRepository; // Inject the UserRepository
+
+    public UspsDigestController(SecurityUtil securityUtil, AuthorizationService authorizationService, USPSDigestService uspsDigestService) {
+        this.securityUtil = securityUtil;
+        this.authorizationService = authorizationService;
+        this.uspsDigestService = uspsDigestService;
+    }
 
     @RequirePermission(Permission.VIEW_ASSIGNED_PATIENTS)
 
