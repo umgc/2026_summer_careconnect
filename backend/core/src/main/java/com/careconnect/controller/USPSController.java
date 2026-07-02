@@ -6,8 +6,6 @@ import com.careconnect.security.AuthorizationService;
 import com.careconnect.security.UnauthorizedException;
 import com.careconnect.service.USPSDigestService;
 import com.careconnect.util.SecurityUtil;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,28 +16,29 @@ import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/v1/api/usps")
-@RequiredArgsConstructor
 public class USPSController {
 
     private final USPSDigestService service;
+    private final SecurityUtil securityUtil;
+    private final AuthorizationService authorizationService;
 
-    @Autowired
-    private SecurityUtil securityUtil;
-
-    @Autowired
-    private AuthorizationService authorizationService;
+    public USPSController(SecurityUtil securityUtil, AuthorizationService authorizationService, USPSDigestService uspsDigestService) {
+        this.securityUtil = securityUtil;
+        this.authorizationService = authorizationService;
+        this.service = uspsDigestService;
+    }
 
     @GetMapping("/mail")
     public ResponseEntity<USPSDigest> getDigest(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) throws UnauthorizedException {
-        // RBAC: Only admins and caregivers can access USPS mail data
-        if (securityUtil != null && authorizationService != null) {
-            User currentUser = securityUtil.resolveCurrentUser();
-            authorizationService.requireAdminOrCaregiver(currentUser);
+        if (jwt == null) {
+            throw new UnauthorizedException("Missing or invalid authentication token");
         }
-        var userId = jwt != null ? jwt.getSubject() : "demo-user"; // fallback for early testing
+        User currentUser = securityUtil.resolveCurrentUser();
+        authorizationService.requireAdminOrCaregiver(currentUser);
+        var userId = jwt.getSubject();
         var digestOpt = date != null
                 ? service.digestForDate(userId, date)
                 : service.latestForUser(userId);
