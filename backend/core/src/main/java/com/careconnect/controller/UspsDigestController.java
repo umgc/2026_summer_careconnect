@@ -11,26 +11,30 @@ import com.careconnect.service.USPSDigestService;
 import com.careconnect.util.SecurityUtil;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-import com.careconnect.repository.UserRepository; // Import the UserRepository to fetch user details based on userId
+import com.careconnect.repository.UserRepository;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("v1/api/usps")
+@RequestMapping("/v1/api/usps")
 public class UspsDigestController {
 
     private final SecurityUtil securityUtil;
     private final AuthorizationService authorizationService;
     private final USPSDigestService uspsDigestService;
-    private final UserRepository userRepository; // Inject the UserRepository
+    private final UserRepository userRepository;
 
-    public UspsDigestController(SecurityUtil securityUtil, AuthorizationService authorizationService, USPSDigestService uspsDigestService) {
+    public UspsDigestController(SecurityUtil securityUtil, AuthorizationService authorizationService,
+                                USPSDigestService uspsDigestService, UserRepository userRepository) {
         this.securityUtil = securityUtil;
         this.authorizationService = authorizationService;
         this.uspsDigestService = uspsDigestService;
+        this.userRepository = userRepository;
     }
 
     @RequirePermission(Permission.VIEW_ASSIGNED_PATIENTS)
@@ -38,20 +42,20 @@ public class UspsDigestController {
 
     @GetMapping("/latest")
     public ResponseEntity<USPSDigest> getLatestDigest(
-            @RequestParam String userId,
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam String patientEmail,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) throws UnauthorizedException {
 
-
-            //replace the following line with the actual logic to fetch the current user and the patient user based on userId
-         User currentUser = securityUtil.resolveCurrentUser();
-        User patientUser = userRepository.findByEmail(userId)
-                .orElseThrow(() -> new UnauthorizedException("No patient found for userId: " + userId));
+        if (jwt == null) throw new UnauthorizedException("Missing or invalid authentication token");
+        User currentUser = securityUtil.resolveCurrentUser();
+        User patientUser = userRepository.findByEmail(patientEmail)
+                .orElseThrow(() -> new UnauthorizedException("No patient found for email: " + patientEmail));
         authorizationService.requirePatientAccess(currentUser, patientUser.getId());
 
         var digest = date != null
-                ? uspsDigestService.digestForDate(userId, date)
-                : uspsDigestService.latestForUser(userId);
+                ? uspsDigestService.digestForDate(patientEmail, date)
+                : uspsDigestService.latestForUser(patientEmail);
 
         return digest
                 .map(ResponseEntity::ok)
@@ -63,15 +67,17 @@ public class UspsDigestController {
 
     @GetMapping("/search")
     public ResponseEntity<List<Map<String, Object>>> search(
-            @RequestParam String userId,
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam String patientEmail,
             @RequestParam String keyword) throws UnauthorizedException {
 
+        if (jwt == null) throw new UnauthorizedException("Missing or invalid authentication token");
         User currentUser = securityUtil.resolveCurrentUser();
-        User patientUser = userRepository.findByEmail(userId)
-                .orElseThrow(() -> new UnauthorizedException("No patient found for userId: " + userId));
+        User patientUser = userRepository.findByEmail(patientEmail)
+                .orElseThrow(() -> new UnauthorizedException("No patient found for email: " + patientEmail));
         authorizationService.requirePatientAccess(currentUser, patientUser.getId());
 
-        var results = uspsDigestService.search(userId, keyword);
+        var results = uspsDigestService.search(patientEmail, keyword);
         return ResponseEntity.ok(results);
     }
 
@@ -80,14 +86,16 @@ public class UspsDigestController {
 
     @PostMapping("/clear-cache")
     public ResponseEntity<String> clearCache(
-            @RequestParam String userId) throws UnauthorizedException {
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam String patientEmail) throws UnauthorizedException {
 
+        if (jwt == null) throw new UnauthorizedException("Missing or invalid authentication token");
         User currentUser = securityUtil.resolveCurrentUser();
-        User patientUser = userRepository.findByEmail(userId)
-                .orElseThrow(() -> new UnauthorizedException("No patient found for userId: " + userId));
+        User patientUser = userRepository.findByEmail(patientEmail)
+                .orElseThrow(() -> new UnauthorizedException("No patient found for email: " + patientEmail));
         authorizationService.requirePatientAccess(currentUser, patientUser.getId());
 
-        uspsDigestService.clearCacheForUser(userId);
-        return ResponseEntity.ok("Cache cleared successfully for user: " + userId);
+        uspsDigestService.clearCacheForUser(patientEmail);
+        return ResponseEntity.ok("Cache cleared successfully for user: " + patientEmail);
     }
 }
